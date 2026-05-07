@@ -2087,32 +2087,48 @@ def api_register():
 
 @app.post("/api/auth/login")
 def api_login():
-    data = request.json or {}
-    username = data.get("username", "").strip()
-    password = data.get("password", "")
+    try:
+        data = request.json or {}
+        username = data.get("username", "").strip()
+        password = data.get("password", "")
 
-    user = User.query.filter_by(username=username).first()
-    if not user or not user.check_password(password):
-        return jsonify({"error": "Invalid credentials"}), 401
+        user = User.query.filter_by(username=username).first()
+        if not user or not user.check_password(password):
+            return jsonify({"error": "Invalid credentials"}), 401
+                
+        if not user.is_verified:
+            # Re-send OTP if not verified
+            otp = str(random.randint(100000, 999999))
+            user.otp_code = otp
+            user.otp_expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
+            db.session.commit()
             
-    if not user.is_verified:
-        # Re-send OTP if not verified
-        otp = str(random.randint(100000, 999999))
-        user.otp_code = otp
-        user.otp_expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
-        db.session.commit()
-        # Assuming send_email function is defined elsewhere
-        # For this example, I'll use the existing SMTP logic
-        try:
-            msg = EmailMessage()
-            msg["Subject"] = "Verify Your Terra Tern Account"
-            msg["From"] = f"JSA Pipeline <{OTP_EMAIL}>"
-            msg["To"] = user.email
-            msg.set_content(f"Your verification code is: {otp}\nExpires in 10 minutes.")
-            
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-                server.starttls()
-                server.login(OTP_EMAIL, OTP_PASS)
+            try:
+                msg = EmailMessage()
+                msg["Subject"] = "Verify Your Terra Tern Account"
+                msg["From"] = f"JSA Pipeline <{OTP_EMAIL}>"
+                msg["To"] = user.email
+                msg.set_content(f"Your verification code is: {otp}\nExpires in 10 minutes.")
+                
+                with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+                    server.starttls()
+                    server.login(OTP_EMAIL, OTP_PASS)
+                    server.send_message(msg)
+                return jsonify({"status": "unverified", "message": "Verification code sent to your email."}), 200
+            except Exception as email_err:
+                print(f"[Login] SMTP Error: {email_err}")
+                return jsonify({"status": "unverified", "message": "Account exists but failed to send verification email."}), 200
+
+        if not user.is_approved:
+            return jsonify({"error": "Your account is pending approval by an administrator."}), 403
+
+        session["user_id"] = user.id
+        session["username"] = user.username
+        session["role"] = user.role
+        return jsonify({"message": "Login successful", "role": user.role}), 200
+    except Exception as e:
+        print(f"[Login] Critical Error: {e}")
+        return jsonify({"error": f"Internal Server Error: {str(e)}"}), 500
                 server.send_message(msg)
         except Exception as e:
             print(f"[Auth] SMTP Error re-sending verification OTP: {e}")
@@ -7744,12 +7760,29 @@ def api_smart_automation_apply():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
+        # Ensure at least one admin exists
+        admin = User.query.filter_by(role='admin').first()
+        if not admin:
+            from werkzeug.security import generate_password_hash
+            print("[Startup] No admin found. Creating default admin...")
+            admin = User(
+                username='admin',
+                email='admin@terratern.com',
+                password_hash=generate_password_hash('admin123'),
+                is_verified=True,
+                is_approved=True,
+                role='admin'
+            )
+            db.session.add(admin)
+            db.session.commit()
+            print("[Startup] Default admin 'admin' created with password 'admin123'")
+        
         # Enable WAL mode for SQLite to handle multi-threaded access
         try:
             db.session.execute(text("PRAGMA journal_mode=WAL;"))
             db.session.commit()
         except Exception as e:
-            print(f"Error enabling WAL: {e}")
+            print(f"[Startup] Error enabling WAL: {e}")
 
     
     debug = False
