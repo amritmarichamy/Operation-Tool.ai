@@ -1,0 +1,18 @@
+# ---- Core Framework ----
+Flask==3.0.3
+flask-cors==4.0.1
+flask-sqlalchemy==3.1.1
+SQLAlchemy==2.0.32
+
+# ---- Data Processing ----
+openpyxl==3.1.5
+pandas>=2.0.0
+
+# ---- Web Scraping / Sync ----
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+selenium>=4.0.0
+webdriver-manager>=4.0.0
+
+# ---- DNS Validation (optional) ----
+dnspython==2.6.1

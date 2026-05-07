@@ -1,0 +1,2451 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Terra Tern Email CRM</title>
+  <link rel="icon" type="image/png" href="/static/img/terratern-logo.png" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link href="/static/css/dashboard.css?v=18.14" rel="stylesheet" />
+</head>
+
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark tt-nav shadow-sm sticky-top">
+    <div class="container-fluid">
+      <a class="navbar-brand d-flex align-items-center gap-2 gap-md-3 text-decoration-none" href="#" aria-label="Terra Tern Operations Tool">
+        <img src="/static/img/terratern-icon.png" class="tt-brand-logo-img" alt="" width="160" height="40" decoding="async" />
+        <span class="fw-bold d-none d-sm-inline">Terra Tern Operations Tool</span>
+      </a>
+      <div class="d-flex align-items-center gap-3">
+        <div class="d-none d-md-flex align-items-center gap-2">
+          <span class="badge tt-badge border" id="targetsBadge">Targets: 0</span>
+          <span class="badge tt-badge border" id="candsBadge">Candidates: 0</span>
+        </div>
+        <span class="badge tt-badge text-bg-success shadow-sm" id="backendBadge">Backend: Online</span>
+        <a class="btn btn-outline-light btn-sm px-3" href="/__health__" target="_blank"
+          style="border-radius: 10px; font-size: 0.7rem;">Health</a>
+        <a class="btn btn-outline-danger btn-sm px-3" href="/api/auth/logout"
+          style="border-radius: 10px; font-size: 0.7rem;">Logout</a>
+      </div>
+    </div>
+  </nav>
+  <div class="tt-toast-area toast-container position-fixed top-0 end-0 p-3" id="toastArea"></div>
+
+  <div class="container-fluid py-3">
+    <div class="row g-3">
+      <div class="col-12 col-lg-2" id="sideTabsContainer">
+        <div class="card tt-card mb-3">
+          <div class="card-body p-4">
+            <div class="tt-side-title mb-3">Workspace</div>
+            <div class="list-group" id="sideTabs">
+              <button type="button" class="list-group-item list-group-item-action active" data-tab="tab-dashboard">
+                <i class="bi bi-speedometer2"></i> Dashboard
+              </button>
+              <button type="button" class="list-group-item list-group-item-action" data-tab="tab-candidates">
+                <i class="bi bi-people-fill"></i> Candidates
+              </button>
+              <button class="list-group-item list-group-item-action" data-tab="tab-targets">
+                <i class="bi bi-building-fill-gear"></i> Targets (HR List)
+              </button>
+              <button class="list-group-item list-group-item-action" data-tab="tab-run">
+                <i class="bi bi-rocket-takeoff-fill"></i> Run Now
+              </button>
+              <button class="list-group-item list-group-item-action" data-tab="tab-runs">
+                <i class="bi bi-bar-chart-fill"></i> Analytics
+              </button>
+              <button class="list-group-item list-group-item-action" data-tab="tab-results">
+                <i class="bi bi-journal-check"></i> Results (Status)
+              </button>
+              {% if session.get('role') == 'admin' %}
+              <button class="list-group-item list-group-item-action" data-tab="tab-admin">
+                <i class="bi bi-shield-lock-fill"></i> Admin Panel
+              </button>
+              {% endif %}
+              <a href="/scanner" target="_blank" class="list-group-item list-group-item-action text-decoration-none">
+                <i class="bi bi-envelope-check-fill"></i> Email Scanner
+              </a>
+              <button class="list-group-item list-group-item-action" data-tab="tab-role-analysis">
+                <i class="bi bi-diagram-3-fill"></i> Role Analysis
+              </button>
+              <button class="list-group-item list-group-item-action" data-tab="tab-workflow">
+                <i class="bi bi-calendar-check-fill"></i> 6-Month Service
+              </button>
+              <button class="list-group-item list-group-item-action" data-tab="tab-bucklist">
+                <i class="bi bi-grid-3x3-gap"></i> Bucklist
+              </button>
+            </div>
+
+            <div class="mt-4 pt-4 border-top border-secondary border-opacity-10">
+              <div class="tt-side-title mb-3">Variables</div>
+              <div class="d-flex flex-wrap gap-2">
+                <span class="badge border border-secondary border-opacity-25 text-muted">{role}</span>
+                <span class="badge border border-secondary border-opacity-25 text-muted">{company}</span>
+                <span class="badge border border-secondary border-opacity-25 text-muted">{hr_name}</span>
+                <span class="badge border border-secondary border-opacity-25 text-muted">{pa_member}</span>
+                <span class="badge border border-secondary border-opacity-25 text-muted">{candidate}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-10" id="mainContentCol">
+        <!-- Overview dashboard -->
+        <section id="tab-dashboard" class="tt-tab">
+          <div class="tt-dash-hero rounded-4 p-4 p-lg-5 mb-4 text-white position-relative overflow-hidden">
+            <div class="position-relative z-1">
+              <p class="text-white-50 small text-uppercase fw-bold mb-1 letter-space-xs" style="letter-spacing:0.12em">Terra Tern · Operations</p>
+              <h1 class="h3 fw-bold mb-2" id="ttDashGreeting">Welcome back</h1>
+              <p class="mb-0 opacity-90 small col-lg-8">A quick, color-coded snapshot of candidates, Bucklist bands, active automation, and HR targets — so you see what needs attention at a glance.</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2 align-items-center position-relative z-1 mt-3">
+              <button type="button" class="btn btn-light btn-sm" id="ttDashRefreshBtn">
+                <i class="bi bi-arrow-clockwise me-1"></i> Refresh overview
+              </button>
+              <a href="/api/candidates/sqlite_backup" role="button"
+                class="btn btn-outline-light btn-sm tt-dash-sql-backup-link"
+                title="Full SQLite snapshot of the CRM (uses link so download works even if dashboard.js is cached or fails)"
+                onclick="return window.confirm('Download the full CRM database (.sqlite3)? It includes candidates (e.g. Gmail app passwords), HR targets, users, and runs. Keep the file private.');">
+                <i class="bi bi-database-down me-1"></i> Download SQL backup
+              </a>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-6 col-xl-3">
+              <div class="tt-dash-stat tt-dash-stat--candidates rounded-4 h-100">
+                <div class="tt-dash-stat-icon"><i class="bi bi-people-fill"></i></div>
+                <div class="small text-uppercase fw-bold tt-dash-stat-label">Candidates</div>
+                <div class="tt-dash-stat-value" id="ttDashStatCandidates">—</div>
+                <div class="small tt-dash-stat-sub" id="ttDashStatCandSub">Loading…</div>
+              </div>
+            </div>
+            <div class="col-6 col-xl-3">
+              <div class="tt-dash-stat tt-dash-stat--workflow rounded-4 h-100">
+                <div class="tt-dash-stat-icon"><i class="bi bi-calendar2-check-fill"></i></div>
+                <div class="small text-uppercase fw-bold tt-dash-stat-label">6-Month service</div>
+                <div class="tt-dash-stat-value" id="ttDashStatWorkflow">—</div>
+                <div class="small tt-dash-stat-sub" id="ttDashStatWfSub">Active / paused plans</div>
+              </div>
+            </div>
+            <div class="col-6 col-xl-3">
+              <div class="tt-dash-stat tt-dash-stat--targets rounded-4 h-100">
+                <div class="tt-dash-stat-icon"><i class="bi bi-building-fill-check"></i></div>
+                <div class="small text-uppercase fw-bold tt-dash-stat-label">HR targets</div>
+                <div class="tt-dash-stat-value" id="ttDashStatTargets">—</div>
+                <div class="small tt-dash-stat-sub" id="ttDashStatTgSub">Saved companies &amp; roles</div>
+              </div>
+            </div>
+            <div class="col-6 col-xl-3">
+              <div class="tt-dash-stat tt-dash-stat--pipeline rounded-4 h-100">
+                <div class="tt-dash-stat-icon"><i class="bi bi-graph-up-arrow"></i></div>
+                <div class="small text-uppercase fw-bold tt-dash-stat-label">Pipeline signals</div>
+                <div class="tt-dash-stat-value" id="ttDashStatPipeline">—</div>
+                <div class="small tt-dash-stat-sub" id="ttDashStatPipeSub">Assessments · interviews · offers</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-4">
+            <div class="col-lg-7">
+              <div class="card tt-dash-card border-0 shadow-sm h-100 rounded-4">
+                <div class="card-body p-4">
+                  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                    <div>
+                      <h2 class="h6 fw-bold mb-1 text-body-secondary text-uppercase small" style="letter-spacing:0.06em">Bucklist · tenure bands</h2>
+                      <p class="text-muted small mb-0">Where candidates sit by service day (saved or estimated).</p>
+                    </div>
+                    <span class="badge tt-dash-pill" id="ttDashBucklistTotal">0 total</span>
+                  </div>
+                  <div id="ttDashBucklistBars" class="tt-dash-bars mb-3"></div>
+                  <div id="ttDashBucklistLegend" class="row g-2 small"></div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-5">
+              <div class="card tt-dash-card border-0 shadow-sm h-100 rounded-4 mb-4">
+                <div class="card-body p-4">
+                  <h2 class="h6 fw-bold mb-3 text-body-secondary text-uppercase small" style="letter-spacing:0.06em">Enrollment mix</h2>
+                  <div class="d-flex flex-column gap-3">
+                    <div class="tt-dash-enroll-row">
+                      <span class="tt-dash-enroll-dot tt-dash-enroll-dot--ongoing"></span>
+                      <span class="small fw-semibold flex-grow-1">Ongoing</span>
+                      <span class="fw-bold" id="ttDashEnrollOngoing">—</span>
+                    </div>
+                    <div class="tt-dash-enroll-row">
+                      <span class="tt-dash-enroll-dot tt-dash-enroll-dot--hold"></span>
+                      <span class="small fw-semibold flex-grow-1">On hold</span>
+                      <span class="fw-bold" id="ttDashEnrollHold">—</span>
+                    </div>
+                    <div class="tt-dash-enroll-row">
+                      <span class="tt-dash-enroll-dot tt-dash-enroll-dot--done"></span>
+                      <span class="small fw-semibold flex-grow-1">Completed</span>
+                      <span class="fw-bold" id="ttDashEnrollDone">—</span>
+                    </div>
+                  </div>
+                  <hr class="my-4 opacity-25">
+                  <div class="small text-muted mb-2">Attention</div>
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span class="small"><i class="bi bi-key-fill text-danger me-1"></i> Missing app password</span>
+                    <span class="fw-bold text-danger" id="ttDashMissingPwd">—</span>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center mt-2">
+                    <span class="small"><i class="bi bi-question-circle text-warning me-1"></i> Not in a Bucklist band</span>
+                    <span class="fw-bold text-warning" id="ttDashUnassigned">—</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card tt-dash-card border-0 shadow-sm rounded-4 mt-4">
+            <div class="card-body p-4">
+              <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                <div>
+                  <h2 class="h6 fw-bold mb-1 text-body-secondary text-uppercase small" style="letter-spacing:0.06em">6-Month plan · targets by period</h2>
+                  <p class="text-muted small mb-0">All candidates are listed. <strong>Apps vs curve</strong> uses service day + official milestones (e.g. ~100 by day 30, ~300 by day 60, up to 1200 after day 180): <strong>On track</strong> means applications &ge; that curve for <em>today&rsquo;s</em> day; each phase column compares the same way (current phase = today; finished phases = end of that phase).</p>
+                </div>
+              </div>
+              <div id="ttDashWfTracker" class="tt-dash-wf-tracker mt-3"></div>
+            </div>
+          </div>
+
+          <div class="card tt-dash-card border-0 shadow-sm rounded-4 mt-4">
+            <div class="card-body p-4">
+              <h2 class="h6 fw-bold mb-3 text-body-secondary text-uppercase small" style="letter-spacing:0.06em">Go to workspace</h2>
+              <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn tt-dash-quick tt-dash-quick--primary" data-tt-goto="tab-candidates"><i class="bi bi-people-fill me-2"></i>Candidates</button>
+                <button type="button" class="btn tt-dash-quick tt-dash-quick--bucklist" data-tt-goto="tab-bucklist"><i class="bi bi-grid-3x3-gap me-2"></i>Bucklist</button>
+                <button type="button" class="btn tt-dash-quick tt-dash-quick--wf" data-tt-goto="tab-workflow"><i class="bi bi-calendar-check me-2"></i>6-Month service</button>
+                <button type="button" class="btn tt-dash-quick tt-dash-quick--targets" data-tt-goto="tab-targets"><i class="bi bi-building-gear me-2"></i>Targets (HR)</button>
+                <button type="button" class="btn tt-dash-quick tt-dash-quick--run" data-tt-goto="tab-run"><i class="bi bi-rocket-takeoff me-2"></i>Run now</button>
+                <button type="button" class="btn tt-dash-quick tt-dash-quick--results" data-tt-goto="tab-results"><i class="bi bi-journal-check me-2"></i>Results</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Candidates -->
+        <section id="tab-candidates" class="tt-tab d-none">
+          <div class="row g-3">
+            <div class="col-12 col-xl-12" id="candListCol">
+              <div class="card tt-card">
+                <div class="card-body">
+                  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div>
+                      <div class="tt-h">Candidates</div>
+                      <div class="text-muted small">Edit profiles, templates, and documents. <strong>New candidates</strong> are created from <strong>Bucklist</strong> (pick a tenure band there).</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                      <label class="btn btn-outline-primary btn-sm mb-0">
+                        Import Excel
+                        <input type="file" id="candImportXlsx" accept=".xlsx" hidden />
+                      </label>
+                      <button class="btn btn-outline-danger btn-sm" id="candClearAllBtn">Clear All</button>
+                      <button class="btn btn-outline-dark btn-sm" id="candBackupBtn"><i class="bi bi-download"></i>
+                        Backup</button>
+                      <button class="btn btn-outline-success btn-sm" id="candRestoreBtn"><i class="bi bi-upload"></i>
+                        Restore</button>
+                    </div>
+                  </div>
+
+                  <div class="tt-cand-toolbar rounded-3 border shadow-sm mt-3 p-3 p-lg-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                      <span class="small fw-semibold text-uppercase text-muted tt-cand-toolbar-title"><i class="bi bi-funnel me-1 text-primary"></i>Find &amp; filter</span>
+                      <button type="button" class="btn btn-sm btn-outline-primary" id="candRefreshBtn"><i class="bi bi-arrow-clockwise me-1"></i>Refresh</button>
+                    </div>
+                    <div class="row g-3">
+                      <div class="col-12 col-xl-4">
+                        <label class="form-label small fw-semibold mb-1" for="candSearch"><i class="bi bi-search text-primary me-1"></i>Search</label>
+                        <input class="form-control" id="candSearch" placeholder="Name, email, HR country, HR industry, profile industries, PA, RM, PO, status…" autocomplete="off" />
+                      </div>
+                      <div class="col-6 col-md-4 col-xl-2">
+                        <label class="form-label small fw-semibold mb-1" for="candBucklistBandFilter"><i class="bi bi-grid-3x3-gap text-primary me-1"></i>Bucklist</label>
+                        <select class="form-select" id="candBucklistBandFilter" title="Tenure band">
+                          <option value="">All bands</option>
+                          <option value="__unassigned__">Not in a band</option>
+                          <option value="0-30">0 – 30 days</option>
+                          <option value="31-60">31 – 60</option>
+                          <option value="61-90">61 – 90</option>
+                          <option value="91-120">91 – 120</option>
+                          <option value="121-150">121 – 150</option>
+                          <option value="151-180">151 – 180</option>
+                          <option value=">180">&gt; 180</option>
+                        </select>
+                      </div>
+                      <div class="col-6 col-md-4 col-xl-2">
+                        <label class="form-label small fw-semibold mb-1" for="candRmFilter"><i class="bi bi-person-badge text-primary me-1"></i>RM member</label>
+                        <select class="form-select" id="candRmFilter" title="Relationship manager">
+                          <option value="">All RM members</option>
+                        </select>
+                      </div>
+                      <div class="col-6 col-md-4 col-xl-2">
+                        <label class="form-label small fw-semibold mb-1" for="candPoFilter"><i class="bi bi-briefcase text-primary me-1"></i>Placement officer</label>
+                        <select class="form-select" id="candPoFilter" title="Placement officer">
+                          <option value="">All placement officers</option>
+                        </select>
+                      </div>
+                      <div class="col-6 col-md-4 col-xl-2">
+                        <label class="form-label small fw-semibold mb-1" for="candPaFilter">PA member</label>
+                        <select class="form-select" id="candPaFilter">
+                          <option value="">All PA</option>
+                        </select>
+                      </div>
+                      <div class="col-12 col-md-6 col-xl-4">
+                        <label class="form-label small fw-semibold mb-1" for="candCountryFilter">Country</label>
+                        <select class="form-select" id="candCountryFilter">
+                          <option value="">All countries</option>
+                        </select>
+                      </div>
+                      <div class="col-6 col-md-4 col-xl-2">
+                        <label class="form-label small fw-semibold mb-1" for="candEnrollmentFilter">Enrollment</label>
+                        <select class="form-select" id="candEnrollmentFilter" title="Enrollment status">
+                          <option value="">All statuses</option>
+                          <option value="Ongoing">Ongoing</option>
+                          <option value="On Hold">On Hold</option>
+                          <option value="Completed">Completed</option>
+                        </select>
+                      </div>
+                      <div class="col-6 col-md-4 col-xl-2">
+                        <label class="form-label small fw-semibold mb-1" for="candIndustryFilter" title="Matches HR target industry or profile industries text">Industry</label>
+                        <select class="form-select" id="candIndustryFilter">
+                          <option value="">All industries</option>
+                        </select>
+                      </div>
+                      <div class="col-12 col-md-8 col-xl-4 d-flex align-items-end">
+                        <div class="form-check form-switch tt-cand-switch w-100 mb-0 py-2 px-3 border rounded-3 bg-white">
+                          <input class="form-check-input mt-0" type="checkbox" id="filterNoAppPwd" style="cursor: pointer;">
+                          <label class="form-check-label small fw-semibold text-danger ms-2 mb-0" for="filterNoAppPwd" style="cursor: pointer;">Missing app password only</label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="card border border-secondary border-opacity-25 bg-light mt-3 p-3 rounded-3">
+                    <div class="small text-uppercase text-muted fw-bold mb-1">Bulk reassignment</div>
+                    <p class="text-muted small mb-2 mb-md-3">Move candidates between <strong>placement officers</strong> or <strong>RM members</strong>. Matches are case-insensitive. Dropdowns include your roster plus values already on file.</p>
+                    <div class="row g-3">
+                      <div class="col-lg-6">
+                        <div class="fw-semibold small mb-2">Placement officer</div>
+                        <div class="row g-2 align-items-end">
+                          <div class="col-12 col-sm">
+                            <label class="form-label small mb-0" for="poTransferFrom">From (current)</label>
+                            <select class="form-select form-select-sm" id="poTransferFrom"></select>
+                          </div>
+                          <div class="col-12 col-sm">
+                            <label class="form-label small mb-0" for="poTransferTo">To (new)</label>
+                            <select class="form-select form-select-sm" id="poTransferTo"></select>
+                          </div>
+                          <div class="col-12 col-sm-auto">
+                            <button type="button" class="btn btn-primary btn-sm w-100" id="poTransferBtn"><i class="bi bi-arrow-left-right me-1"></i>Transfer PO</button>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-lg-6">
+                        <div class="fw-semibold small mb-2">RM member</div>
+                        <div class="row g-2 align-items-end">
+                          <div class="col-12 col-sm">
+                            <label class="form-label small mb-0" for="rmTransferFrom">From (current)</label>
+                            <select class="form-select form-select-sm" id="rmTransferFrom"></select>
+                          </div>
+                          <div class="col-12 col-sm">
+                            <label class="form-label small mb-0" for="rmTransferTo">To (new)</label>
+                            <select class="form-select form-select-sm" id="rmTransferTo"></select>
+                          </div>
+                          <div class="col-12 col-sm-auto">
+                            <button type="button" class="btn btn-primary btn-sm w-100" id="rmTransferBtn"><i class="bi bi-arrow-left-right me-1"></i>Transfer RM</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="form-check mt-2 mb-0">
+                      <input class="form-check-input" type="checkbox" id="candBulkTransferScopeFiltered" />
+                      <label class="form-check-label small" for="candBulkTransferScopeFiltered">Only candidates currently visible (respects search, Bucklist band, RM, PO, PA, enrollment, country, industry, app pwd)</label>
+                    </div>
+                  </div>
+
+                  <div class="tt-table-wrap mt-3">
+                    <table class="table table-sm align-middle tt-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Email</th>
+                          <th>PA</th>
+                          <th>RM</th>
+                          <th>PO</th>
+                          <th>Days</th>
+                          <th>Bucklist</th>
+                          <th>Enrollment</th>
+                          <th title="Cold-email / campaign HR country (same as Bucklist)">HR country</th>
+                          <th title="Cold-email / campaign HR industry">HR industry</th>
+                          <th title="Comma-separated industries on profile or import">Profile industries</th>
+                          <th>Assets</th>
+                          <th>Updated</th>
+                        </tr>
+                      </thead>
+                      <tbody id="candTbody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-xl-6" id="candProfileCard" style="display: none;">
+              <div class="card tt-card">
+                <div class="card-body">
+                  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div>
+                      <div class="tt-h mb-1">Candidate Profile</div>
+                      <div class="text-muted small">Configure sender identity, templates, and assets.</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-outline-danger btn-sm" id="candDeleteBtn" disabled>Delete</button>
+                      <button class="btn btn-primary btn-sm px-4" id="candSaveBtn">Save Profile</button>
+                    </div>
+                  </div>
+
+                  <input type="hidden" id="candId" />
+                  <div class="row g-3 mt-2">
+                    <div class="col-md-6">
+                      <label class="form-label">Full Name</label>
+                      <div class="input-group">
+                        <span
+                          class="input-group-text bg-transparent border-end-0 border-secondary border-opacity-25 text-muted"><i
+                            class="bi bi-person"></i></span>
+                        <input class="form-control border-start-0" id="candName" placeholder="e.g. John Doe" />
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Gmail Address</label>
+                      <div class="input-group">
+                        <span
+                          class="input-group-text bg-transparent border-end-0 border-secondary border-opacity-25 text-muted"><i
+                            class="bi bi-envelope"></i></span>
+                        <input class="form-control border-start-0" id="candEmail" placeholder="user@gmail.com" />
+                      </div>
+                    </div>
+
+                    <div class="col-md-6">
+                      <label class="form-label">App Password</label>
+                      <div class="input-group">
+                        <span
+                          class="input-group-text bg-transparent border-end-0 border-secondary border-opacity-25 text-muted"><i
+                            class="bi bi-key"></i></span>
+                        <input class="form-control border-start-0" id="candAppPwd" type="password"
+                          placeholder="16-character code" />
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">PA Member</label>
+                      <div class="input-group">
+                        <span
+                          class="input-group-text bg-transparent border-end-0 border-secondary border-opacity-25 text-muted"><i
+                            class="bi bi-shield-check"></i></span>
+                        <input class="form-control border-start-0" id="candPaMember" placeholder="e.g. Sarah" />
+                      </div>
+                    </div>
+
+                    <div class="col-md-6">
+                      <label class="form-label">RM member</label>
+                      <div class="input-group">
+                        <span
+                          class="input-group-text bg-transparent border-end-0 border-secondary border-opacity-25 text-muted"><i
+                            class="bi bi-person-badge"></i></span>
+                        <input class="form-control border-start-0" id="candRmMember" list="placementOfficerRosterList"
+                          placeholder="Relationship manager — roster or type" autocomplete="off" />
+                      </div>
+                      <div class="form-text small">Separate from placement officer; used for filters, list column <strong>RM</strong>, and templates as <code>{rm_member}</code>.</div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Placement officer</label>
+                      <div class="input-group">
+                        <span
+                          class="input-group-text bg-transparent border-end-0 border-secondary border-opacity-25 text-muted"><i
+                            class="bi bi-briefcase"></i></span>
+                        <input class="form-control border-start-0" id="candPlacementOfficer" list="placementOfficerRosterList"
+                          placeholder="Placement officer — roster or type" autocomplete="off" />
+                      </div>
+                      <div class="form-text small">List column <strong>PO</strong>; templates as <code>{placement_officer_member}</code>.</div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Days in system</label>
+                      <div class="input-group">
+                        <span
+                          class="input-group-text bg-transparent border-end-0 border-secondary border-opacity-25 text-muted"><i
+                            class="bi bi-calendar-range"></i></span>
+                        <input class="form-control border-start-0" id="candBucklistDays" type="number" min="0" step="1"
+                          placeholder="e.g. 45 (Bucklist)" inputmode="numeric" />
+                      </div>
+                      <div class="form-text small text-muted" id="candBucklistDaysHint">Sets Bucklist day buckets. Clear to use the automatic estimate (service start or record age).</div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Roles (Comma separated)</label>
+                      <div class="input-group">
+                        <span
+                          class="input-group-text bg-transparent border-end-0 border-secondary border-opacity-25 text-muted"><i
+                            class="bi bi-tags"></i></span>
+                        <input class="form-control border-start-0" id="candRoles"
+                          placeholder="Python Developer, Data Analyst" />
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Profile industries</label>
+                      <div class="input-group">
+                        <span
+                          class="input-group-text bg-transparent border-end-0 border-secondary border-opacity-25 text-muted"><i
+                            class="bi bi-building"></i></span>
+                        <input class="form-control border-start-0" id="candIndustryTypes" name="industry_types"
+                          placeholder="e.g. IT, Finance, Healthcare (comma-separated)" autocomplete="off" />
+                      </div>
+                      <div class="form-text small text-muted">Résumé / import field — separate from the single <strong>HR target industry</strong> below (used with cold-email targeting).</div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Enrollment ID</label>
+                      <div class="input-group">
+                        <span
+                          class="input-group-text bg-transparent border-end-0 border-secondary border-opacity-25 text-muted"><i
+                            class="bi bi-hash"></i></span>
+                        <input class="form-control border-start-0" id="candEnrollmentId" placeholder="e.g. ENR001" />
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Enrollment status</label>
+                      <div class="input-group">
+                        <span
+                          class="input-group-text bg-transparent border-end-0 border-secondary border-opacity-25 text-muted"><i
+                            class="bi bi-flag"></i></span>
+                        <select class="form-select border-start-0" id="candEnrollmentStatus">
+                          <option value="Ongoing">Ongoing</option>
+                          <option value="On Hold">On Hold</option>
+                          <option value="Completed">Completed</option>
+                        </select>
+                      </div>
+                      <div class="form-text small" id="candEnrollmentAutomationHint"><strong>Ongoing</strong> resumes <strong>6-Month Service</strong> email batches (if a plan exists). <strong>On Hold</strong> / <strong>Completed</strong> pauses them automatically when you save.</div>
+                    </div>
+                    <div class="col-12">
+                      <div class="tt-cand-hr-targets border border-primary border-opacity-25 rounded-3 p-3 bg-primary bg-opacity-5">
+                        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
+                          <div>
+                            <div class="fw-semibold text-primary"><i class="bi bi-bullseye me-1"></i>HR targets (cold email &amp; campaigns)</div>
+                            <div class="small text-muted mb-0">Same values as your <strong>Targets (HR list)</strong>: click the fields for suggestions (countries &amp; industries from imported HR contacts). You can still type a custom value. Shown in the candidate table for auditing.</div>
+                          </div>
+                          <div class="small text-muted text-md-end" id="candProfileAuditLine" style="max-width: 100%;"></div>
+                        </div>
+                        <div class="row g-3">
+                          <div class="col-md-6">
+                            <label class="form-label mb-1" for="candCountryType">HR target — country</label>
+                            <div class="input-group">
+                              <span
+                                class="input-group-text bg-transparent border-end-0 border-secondary border-opacity-25 text-muted"><i
+                                  class="bi bi-globe2"></i></span>
+                              <input class="form-control border-start-0" id="candCountryType" list="wfCountryList"
+                                placeholder="Type or pick a country (e.g. Germany, UAE)" autocomplete="off" />
+                            </div>
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label mb-1" for="candSmartIndustry">HR target — industry</label>
+                            <div class="input-group">
+                              <span
+                                class="input-group-text bg-transparent border-end-0 border-secondary border-opacity-25 text-muted"><i
+                                  class="bi bi-diagram-3"></i></span>
+                              <input class="form-control border-start-0" id="candSmartIndustry" list="wfIndustryList"
+                                placeholder="Type or pick one industry (e.g. Software, Finance)" autocomplete="off" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="col-12">
+                      <div class="row g-3">
+                        <div class="col-md-6">
+                          <label class="form-label">Resume (PDF)</label>
+                          <input class="form-control" type="file" id="candResume" accept=".pdf" />
+                          <div id="resumeBadge" class="mt-1"></div>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label">Cover Letter (PDF)</label>
+                          <input class="form-control" type="file" id="candCover" accept=".pdf" />
+                          <div id="coverBadge" class="mt-1"></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="col-12">
+                      <hr class="border-secondary opacity-25">
+                      <label class="form-label">Subject Template</label>
+                      <input class="form-control" id="candSubject" placeholder="Application for {role} at {company}" />
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label">Message Body</label>
+                      <textarea class="form-control" id="candMessage" rows="10"
+                        placeholder="Dear {hr_name}, I am writing to express my interest in the {role} position..."></textarea>
+                    </div>
+
+                    <div class="col-12">
+                      <div class="alert alert-warning small mb-0">
+                        Use Gmail App Password. Do not use your normal Gmail password.
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Job Applications Stats (Batch Tool Results) -->
+                  <div class="mt-4 border-top pt-4" id="candJobAppsSection" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <div class="tt-sub mb-0"><i class="bi bi-rocket-takeoff text-primary me-2"></i>Automated Job
+                        Applications</div>
+                      <div class="d-flex gap-2 align-items-center">
+                        <span class="badge bg-secondary" id="jobAppsCountBadge">0 Applications</span>
+                        <button class="btn btn-outline-primary btn-sm" id="syncJobAppsBtn"
+                          title="Sync Status from Gmail">
+                          <i class="bi bi-arrow-repeat"></i> Sync
+                        </button>
+                      </div>
+                    </div>
+                    <div class="tt-table-wrap" style="max-height: 300px; overflow-y: auto;">
+                      <table class="table table-sm align-middle tt-table" style="font-size: 0.8rem;">
+                        <thead>
+                          <tr>
+                            <th>Date</th>
+                            <th>Company</th>
+                            <th>Role</th>
+                            <th>Country</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody id="candJobAppsTbody"></tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <!-- Email Interaction History -->
+                  <div class="mt-4 border-top pt-4" id="candEmailEventsSection" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <div class="tt-sub mb-0"><i class="bi bi-clock-history text-success me-2"></i>Email Interaction
+                        History</div>
+                      <span class="badge bg-success-subtle text-success" id="emailEventsCountBadge">0 Events</span>
+                    </div>
+                    <div class="tt-table-wrap" style="max-height: 300px; overflow-y: auto;">
+                      <table class="table table-sm align-middle tt-table" style="font-size: 0.8rem;">
+                        <thead>
+                          <tr>
+                            <th>Received At</th>
+                            <th>Company</th>
+                            <th>Role</th>
+                            <th>Event</th>
+                            <th>Subject</th>
+                          </tr>
+                        </thead>
+                        <tbody id="candEmailEventsTbody"></tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Targets -->
+        <section id="tab-targets" class="tt-tab d-none">
+          <div class="card tt-card">
+            <div class="card-body p-4">
+              <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                  <div class="tt-h mb-1">Target Intelligence</div>
+                  <div class="text-muted small">Segmented HR database. Create industries to organize your outreach.
+                  </div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                  <button class="btn btn-primary btn-sm px-4" id="industryAddBtn"><i class="bi bi-plus-circle me-1"></i>
+                    + Create New Industry Type</button>
+                  <button class="btn btn-outline-danger btn-sm" id="targetsClearBtn"><i class="bi bi-trash me-1"></i>
+                    Clear All</button>
+                  <button class="btn btn-outline-secondary btn-sm" id="targetsRefreshBtn"><i
+                      class="bi bi-arrow-clockwise"></i></button>
+                </div>
+              </div>
+
+              <div class="row mt-4">
+                <div class="col-12">
+                  <div id="targetGridHeader" class="d-none mb-3">
+                    <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-3">
+                      <h5 id="targetGridTitle" class="mb-0 text-primary">All Countries</h5>
+                      <button class="btn btn-sm btn-outline-secondary" onclick="backToCountries()">Back to
+                        Countries</button>
+                    </div>
+                  </div>
+                  <div id="countryGridContainer" class="industry-grid">
+                    <!-- Country Cards Generated via JS -->
+                  </div>
+                  <div id="industryGridContainer" class="industry-grid d-none">
+                    <!-- Industry Cards Generated via JS -->
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-3 mt-4 industry-details-section d-none" id="industryDetailsSection">
+                <div class="col-12">
+                  <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                      <h5 id="selectedIndustryTitle" class="mb-0">Default Industry</h5>
+                    </div>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-primary btn-sm px-4" id="targetNewBtn"><i class="bi bi-plus-lg me-1"></i>
+                        Add Target</button>
+                      <label class="btn btn-outline-primary btn-sm mb-0">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Upload Excel
+                        <input type="file" id="targetsImportXlsx" accept=".xlsx" hidden />
+                      </label>
+                      <button class="btn btn-sm btn-outline-secondary" id="backToIndustriesBtn">Back to
+                        Industries</button>
+                      <button class="btn btn-sm btn-outline-secondary" id="backToCountriesBtn">Back to
+                        Countries</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row g-3 mt-2">
+                  <div class="col-12 col-xl-12">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                      <div class="tt-sub">Targets</div>
+                      <div class="d-flex gap-2 align-items-center flex-wrap">
+                        <input class="form-control form-control-sm tt-search" id="targetsSearch"
+                          placeholder="Search targets…" />
+                        <div class="btn-group btn-group-sm" role="group" title="CRM upload: Amazon, Amazon - A, Amazon - B merge to one account">
+                          <button type="button" class="btn btn-outline-primary" id="targetsCrmExportFull"><i class="bi bi-file-earmark-spreadsheet me-1"></i>CRM CSV (all rows)</button>
+                          <button type="button" class="btn btn-outline-primary" id="targetsCrmExportDedup"><i class="bi bi-building me-1"></i>CRM CSV (1 row / company)</button>
+                        </div>
+                        <div class="small text-muted" id="targetsSummary">—</div>
+                      </div>
+                    </div>
+
+                    <div class="tt-table-wrap mt-2">
+                      <table class="table table-sm align-middle tt-table">
+                        <thead>
+                          <tr>
+                            <th>Company</th>
+                            <th>Role</th>
+                            <th>HR Email</th>
+                            <th>Country</th>
+                            <th>HR Name</th>
+                            <th>Industry</th>
+                            <th>Valid</th>
+                            <th class="text-end">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody id="targetsTbody"></tbody>
+                      </table>
+                    </div>
+
+                    <div class="alert alert-secondary small mt-2 mb-2">
+                      <strong>CRM CSV:</strong> uses the current country &amp; industry filters above.
+                      Names like <span class="tt-code">Amazon</span>, <span class="tt-code">Amazon - A</span>, <span class="tt-code">Amazon - B</span> share one <strong>canonical company</strong> (single letter after the last hyphen).
+                      <strong>All rows</strong> = one line per contact with a canonical column. <strong>1 row / company</strong> = merged for duplicate-safe CRM accounts.
+                    </div>
+                    <div class="alert alert-info small mt-2">
+                      Supported Excel columns:
+                      <div class="tt-code mt-1">With Role: A Company, B Role, C HR Email, D Country, E HR
+                        Name<br />Without Role: A Company, B HR Email, C Country, D HR Name</div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+        </section>
+
+        <!-- Workspaces (NEW) -->
+        <section id="tab-workspaces" class="tt-tab d-none">
+          <div class="row g-3">
+            <div class="col-12">
+              <div class="card tt-card">
+                <div class="card-body p-4">
+                  <div class="d-flex align-items-center justify-content-between mb-4">
+                    <div>
+                      <div class="tt-h mb-1">Scheduled campaigns</div>
+                      <div class="text-muted small">Only workspaces with automation enabled and a next run time.</div>
+                    </div>
+                  </div>
+
+                  <div id="wsListGrid" class="row g-3">
+                    <!-- Workspace cards via JS -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Run -->
+        <section id="tab-run" class="tt-tab d-none">
+          <div class="card tt-card">
+            <div class="card-body p-4">
+              <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                  <div class="tt-h mb-1">Active Run Control</div>
+                  <div class="text-muted small">Monitor live output and manage execution status.</div>
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-outline-warning btn-sm px-3" id="pauseRunBtn" disabled><i
+                      class="bi bi-pause-fill me-1"></i> Pause</button>
+                  <button class="btn btn-outline-success btn-sm d-none px-3" id="resumeRunBtn" disabled><i
+                      class="bi bi-play-fill me-1"></i> Resume</button>
+                  <button class="btn btn-outline-danger btn-sm px-3" id="stopRunBtn" disabled><i
+                      class="bi bi-stop-fill me-1"></i> Stop</button>
+                </div>
+              </div>
+
+              <div class="row g-3 mt-2">
+                <div class="col-12 col-xl-4">
+                  <div class="tt-sub">Settings</div>
+
+                  <label class="form-label mt-2">Mode</label>
+                  <select class="form-select" id="runMode">
+                    <option value="all" selected>Send for ALL candidates</option>
+                    <option value="single">Send for SELECTED candidates</option>
+                  </select>
+
+                  <label class="form-label mt-2">Delay per email (seconds)</label>
+                  <select class="form-select" id="runDelay">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="15">15</option>
+                    <option value="20">20</option>
+                  </select>
+
+                  <label class="form-label mt-2">Choose Country</label>
+                  <select class="form-select" id="runCountry">
+                    <option value="Global">Global / All Countries</option>
+                    <option value="Canada">Work Canada</option>
+                    <option value="Germany">Work Germany</option>
+                    <option value="Australia">Work Australia</option>
+                    <option value="Austria">Work Austria</option>
+                    <option value="Luxembourg">Work Luxembourg</option>
+                    <option value="Netherlands">Work Netherlands</option>
+                    <option value="Ireland">Work Ireland</option>
+                    <option value="Sweden">Work Sweden</option>
+                    <option value="UAE">Work UAE</option>
+                    <option value="Switzerland">Work Switzerland</option>
+                    <option value="India">Work India</option>
+                  </select>
+
+                  <label class="form-label mt-2">Choose Industry</label>
+                  <select class="form-select" id="runIndustry">
+                    <option value="Default">All Industries (Default)</option>
+                  </select>
+
+                  <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="bounceCheckChk" checked />
+                    <label class="form-check-label" for="bounceCheckChk">Enable bounce check (Gmail IMAP scan after sends — keeps CSV reports free of bounces; slower)</label>
+                  </div>
+
+                  <div class="mt-3 tt-sub">Select candidates (for Selected mode)</div>
+                  <div class="tt-run-cand-panel rounded-3 border bg-body-tertiary bg-opacity-50 p-2 mb-2">
+                    <div class="input-group input-group-sm mb-2">
+                      <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                      <input type="text" class="form-control" id="runCandSearch" placeholder="Filter by name or email…" autocomplete="off" />
+                      <button type="button" class="btn btn-outline-secondary" id="runCandSelectVisible" title="Select all visible">Visible</button>
+                      <button type="button" class="btn btn-outline-secondary" id="runCandClearAll" title="Clear all">Clear</button>
+                    </div>
+                    <div class="tt-picklist tt-picklist-scroll" id="candPickList"></div>
+                    <div class="small text-muted mt-1 px-1" id="runCandPickMeta">0 shown</div>
+                  </div>
+
+                  <button class="btn btn-primary w-100 mt-3" id="startRunBtn">🚀 Start Sending</button>
+
+                  <div class="alert alert-warning small mt-3 mb-0">
+                    Gmail daily limits apply. High volume sending can get accounts blocked.
+                  </div>
+                </div>
+
+                <div class="col-12 col-xl-8">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div class="tt-sub">Live Log</div>
+                    <div class="small text-muted" id="runMeta">—</div>
+                  </div>
+
+                  <div class="d-flex align-items-center gap-3 mt-2 px-2 py-2 rounded" style="background:rgba(255,255,255,0.04);">
+                    <div class="d-flex align-items-center gap-1">
+                      <span class="badge bg-success fs-6 px-3 py-2" id="runSentBadge">0</span>
+                      <span class="small text-muted">Sent</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                      <span class="badge bg-danger fs-6 px-3 py-2" id="runFailedBadge">0</span>
+                      <span class="small text-muted">Failed</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                      <span class="badge bg-warning text-dark fs-6 px-3 py-2" id="runSkippedBadge">0</span>
+                      <span class="small text-muted">Skipped</span>
+                    </div>
+                    <div class="flex-grow-1 text-end">
+                      <span class="small text-muted" id="runCounterLabel">Waiting to start...</span>
+                    </div>
+                  </div>
+
+                  <div class="progress mt-2"
+                    style="height:12px; border-radius: 6px; background: rgba(255,255,255,0.05);">
+                    <div class="progress-bar progress-bar-animated bg-primary shadow-sm" id="runBar" role="progressbar"
+                      style="width:0%; border-radius: 6px;"></div>
+                  </div>
+
+                  <div class="tt-log-container mt-2">
+                    <pre class="tt-log" id="runLog">Ready.</pre>
+                  </div>
+
+                  <div class="d-flex gap-2 flex-wrap mt-2">
+                    <button class="btn btn-outline-secondary btn-sm" id="goRunsBtn">View Runs & Reports</button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+        
+        <!-- 6-Month Service — calculator only -->
+        <section id="tab-workflow" class="tt-tab d-none">
+          <div class="row justify-content-center">
+            <div class="col-12 col-xl-10 col-xxl-8">
+              <div class="card tt-card tt-svc-calculator border-0 shadow-lg overflow-hidden mb-3">
+                <div class="tt-svc-calculator-hero text-white px-4 py-4 px-lg-5 py-lg-5">
+                  <div class="d-flex align-items-start gap-3">
+                    <div class="rounded-3 bg-white bg-opacity-10 p-3 d-none d-sm-flex">
+                      <i class="bi bi-calculator fs-2"></i>
+                    </div>
+                    <div>
+                      <h1 class="h3 fw-bold mb-2">6-Month Service Calculator</h1>
+                      <p class="mb-0 opacity-90 small lh-lg">Enter how many days the client has been in the system and how many job applications they have completed so far. You’ll see the current phase, on-track target, and gap to the 1200 cap.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-body p-4 p-lg-5">
+                  <div class="row g-4">
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold" for="svcCalcDays">Service day count</label>
+                      <input type="number" class="form-control form-control-lg tt-svc-input" id="svcCalcDays" value="0" min="0" step="1" placeholder="0" />
+                      <div class="form-text">Calendar days since 6-month service start (0–180+).</div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold" for="svcCalcApplied">Applications completed till date</label>
+                      <input type="number" class="form-control form-control-lg tt-svc-input" id="svcCalcApplied" value="0" min="0" step="1" placeholder="0" />
+                      <div class="form-text">Total applications (manual + CRM) counted toward the plan.</div>
+                    </div>
+                  </div>
+                  <div class="mt-4 d-flex flex-wrap gap-2 align-items-center">
+                    <button type="button" class="btn btn-primary btn-lg px-4 rounded-pill" id="svcCalcBtn">
+                      <i class="bi bi-arrow-repeat me-2"></i>Calculate
+                    </button>
+                    <span class="text-muted small">Updates live as you type.</span>
+                  </div>
+                  <div id="svcCalcOut" class="tt-svc-calc-out mt-4 pt-2"></div>
+                </div>
+              </div>
+
+              <div class="card tt-card border-0 shadow-sm mb-3 overflow-hidden">
+                <div class="card-body p-4 p-lg-5">
+                  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                    <div>
+                      <h2 class="h5 fw-bold mb-1"><i class="bi bi-envelope-at text-primary me-2"></i>Schedule email automation</h2>
+                      <p class="text-muted small mb-0">Pick a candidate, service progress, target country/industry, and <strong>first send time</strong>. The server runs <strong>daily batches</strong> from the 6-month phase curve (same engine as workflow plans). Sundays are skipped automatically.</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 align-items-center ms-auto">
+                      <div class="input-group input-group-sm" style="min-width: 12rem; max-width: 18rem;">
+                        <span class="input-group-text" id="wfPlanSearchLabel"><i class="bi bi-search" aria-hidden="true"></i></span>
+                        <input
+                          type="search"
+                          class="form-control"
+                          id="wfPlanSearchInput"
+                          placeholder="Search candidates…"
+                          autocomplete="off"
+                          aria-labelledby="wfPlanSearchLabel"
+                          aria-label="Search candidates in 6-Month Service"
+                        />
+                        <button type="button" class="btn btn-outline-secondary" id="wfPlanSearchClearBtn" title="Clear search">Clear</button>
+                      </div>
+                      <button type="button" class="btn btn-primary flex-shrink-0" id="svcOpenAutomationBtn">
+                        <i class="bi bi-calendar-plus me-1"></i> Start scheduling
+                      </button>
+                    </div>
+                  </div>
+                  <div class="table-responsive border rounded-3">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Candidate</th>
+                          <th>Phase</th>
+                          <th>Progress</th>
+                          <th>Elapsed</th>
+                          <th>Status</th>
+                          <th>Next run</th>
+                          <th class="text-end">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="wfTbody"></tbody>
+                    </table>
+                  </div>
+                  <p class="text-muted small mb-0 mt-2">Tip: after you save, batches appear under <strong>Run Now</strong> / Results when the scheduler fires. Ensure targets and candidate documents are ready.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bucklist — day-range grid (below 6-Month Service in sidebar) -->
+        <section id="tab-bucklist" class="tt-tab d-none">
+          <div class="row justify-content-center">
+            <div class="col-12">
+              <div class="card tt-card border-0 shadow-sm tt-bucklist-card">
+                <div class="card-body p-4 p-lg-5">
+                  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+                    <div>
+                      <h1 class="h4 fw-bold mb-1"><i class="bi bi-grid-3x3-gap text-primary me-2"></i>Bucklist</h1>
+                      <p class="text-muted small mb-2"><strong>Teams:</strong> Each column can be owned by a coordinator. <strong>Band setup</strong> saves <strong>applications done so far</strong>, tenure day, and optional new hire — use <strong>6-Month Service</strong> to schedule phased email sends.</p>
+                      <p class="text-muted small mb-0"><strong>How it works:</strong> <strong>Click the blue band title</strong> (or the hint below it) to open that bucket — same progress, pause, stop, and reports as the 6-Month Service table. Names stay inside the open bucket so the grid stays compact. <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">saved</span> / <span class="badge bg-secondary bg-opacity-25 text-secondary border border-secondary border-opacity-25">auto</span> = pinned vs estimated tenure.</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                      <a class="btn btn-outline-primary btn-sm" href="/api/bucklist/template" download>
+                        <i class="bi bi-download me-1"></i> Template (.xlsx)
+                      </a>
+                      <label class="btn btn-primary btn-sm mb-0">
+                        <i class="bi bi-upload me-1"></i> Upload data
+                        <input type="file" id="bucklistFileInput" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="d-none" />
+                      </label>
+                      <button type="button" class="btn btn-outline-secondary btn-sm" id="bucklistRefreshBtn">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Refresh grid
+                      </button>
+                    </div>
+                  </div>
+
+                  <div id="bucklistUploadMsg" class="alert alert-dismissible fade d-none py-2 small mb-3" role="alert">
+                    <span id="bucklistUploadMsgText"></span>
+                    <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+
+                  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 rounded-3 border border-primary border-opacity-25 bg-primary bg-opacity-10 mb-4">
+                    <p class="small mb-0 text-body-secondary flex-grow-1" style="max-width: 46rem;"><i class="bi bi-info-circle text-primary me-1"></i>Use <strong>Band setup</strong> for <strong>applications completed so far</strong> and optional new hire (saved to profiles). Open <strong>6-Month Service</strong> for backlog-aware <strong>email scheduling</strong>. Records still appear on <strong>Candidates</strong>.</p>
+                    <button type="button" class="btn btn-primary flex-shrink-0" id="bucklistOpenSetupBtn">
+                      <i class="bi bi-gear-wide-connected me-1"></i> Band setup…
+                    </button>
+                  </div>
+
+                  <div class="tt-bucklist-unassigned mb-4 p-3 rounded-3 border bg-light" id="bucklistUnassignedWrap">
+                    <div class="small text-uppercase text-muted fw-bold mb-2">Not assigned</div>
+                    <div class="text-muted small mb-2">Candidates <strong>not in a column</strong> yet. Pick a range, enter the day count, then <strong>Assign</strong> — or use per-column <strong>Band setup</strong> / Excel upload.</div>
+                    <ul class="list-unstyled mb-0 tt-bucklist-mini" id="bucklistUnassigned"></ul>
+                  </div>
+
+                  <div class="tt-bucklist-bucket-search mb-3">
+                    <label for="bucklistBucketSearch" class="form-label small fw-semibold text-uppercase text-muted mb-1">Search buckets</label>
+                    <div class="form-text small mb-1">Filters match counts on each band; the open bucket list uses the same search text.</div>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                      <div class="input-group bucklist-bucket-search-input-group">
+                        <span class="input-group-text bg-white" aria-hidden="true"><i class="bi bi-search text-muted"></i></span>
+                        <input type="search" id="bucklistBucketSearch" class="form-control" placeholder="Name, email, country, industry…" autocomplete="off" aria-label="Search candidates in tenure buckets" />
+                        <button type="button" class="btn btn-outline-secondary d-none" id="bucklistBucketSearchClear" title="Clear search" aria-label="Clear search">
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                      </div>
+                      <span id="bucklistBucketSearchHint" class="small text-muted d-none" aria-live="polite"></span>
+                    </div>
+                  </div>
+
+                  <div class="tt-bucklist-grid mb-4" id="bucklistGrid" role="region" aria-label="Bucklist tenure bands">
+                    <div class="tt-bucklist-cell" data-buck-range="0-30">
+                      <div class="tt-bucklist-cell-head">
+                        <span class="tt-bucklist-head-title">0 – 30</span>
+                        <span class="tt-bucklist-head-count badge rounded-pill bg-white text-primary border border-primary border-opacity-25" aria-live="polite">0</span>
+                      </div>
+                      <div class="tt-bucklist-cell-tools">
+                        <button type="button" class="btn tt-bucklist-setup-btn" data-buck-setup="0-30" title="Applications done, new hire, save to profiles (schedule in 6-Month Service)">
+                          <i class="bi bi-gear-wide-connected"></i><span>Band setup</span>
+                        </button>
+                      </div>
+                      <ul class="tt-bucklist-ul" id="bucklistUl-0-30" aria-label="Tenure band 0 to 30"></ul>
+                    </div>
+                    <div class="tt-bucklist-cell" data-buck-range="31-60">
+                      <div class="tt-bucklist-cell-head">
+                        <span class="tt-bucklist-head-title">31 – 60</span>
+                        <span class="tt-bucklist-head-count badge rounded-pill bg-white text-primary border border-primary border-opacity-25">0</span>
+                      </div>
+                      <div class="tt-bucklist-cell-tools">
+                        <button type="button" class="btn tt-bucklist-setup-btn" data-buck-setup="31-60" title="Applications done, new hire, save to profiles (schedule in 6-Month Service)">
+                          <i class="bi bi-gear-wide-connected"></i><span>Band setup</span>
+                        </button>
+                      </div>
+                      <ul class="tt-bucklist-ul" id="bucklistUl-31-60"></ul>
+                    </div>
+                    <div class="tt-bucklist-cell" data-buck-range="61-90">
+                      <div class="tt-bucklist-cell-head">
+                        <span class="tt-bucklist-head-title">61 – 90</span>
+                        <span class="tt-bucklist-head-count badge rounded-pill bg-white text-primary border border-primary border-opacity-25">0</span>
+                      </div>
+                      <div class="tt-bucklist-cell-tools">
+                        <button type="button" class="btn tt-bucklist-setup-btn" data-buck-setup="61-90" title="Applications done, new hire, save to profiles (schedule in 6-Month Service)">
+                          <i class="bi bi-gear-wide-connected"></i><span>Band setup</span>
+                        </button>
+                      </div>
+                      <ul class="tt-bucklist-ul" id="bucklistUl-61-90"></ul>
+                    </div>
+                    <div class="tt-bucklist-cell" data-buck-range="91-120">
+                      <div class="tt-bucklist-cell-head">
+                        <span class="tt-bucklist-head-title">91 – 120</span>
+                        <span class="tt-bucklist-head-count badge rounded-pill bg-white text-primary border border-primary border-opacity-25">0</span>
+                      </div>
+                      <div class="tt-bucklist-cell-tools">
+                        <button type="button" class="btn tt-bucklist-setup-btn" data-buck-setup="91-120" title="Applications done, new hire, save to profiles (schedule in 6-Month Service)">
+                          <i class="bi bi-gear-wide-connected"></i><span>Band setup</span>
+                        </button>
+                      </div>
+                      <ul class="tt-bucklist-ul" id="bucklistUl-91-120"></ul>
+                    </div>
+                    <div class="tt-bucklist-cell" data-buck-range="121-150">
+                      <div class="tt-bucklist-cell-head">
+                        <span class="tt-bucklist-head-title">121 – 150</span>
+                        <span class="tt-bucklist-head-count badge rounded-pill bg-white text-primary border border-primary border-opacity-25">0</span>
+                      </div>
+                      <div class="tt-bucklist-cell-tools">
+                        <button type="button" class="btn tt-bucklist-setup-btn" data-buck-setup="121-150" title="Applications done, new hire, save to profiles (schedule in 6-Month Service)">
+                          <i class="bi bi-gear-wide-connected"></i><span>Band setup</span>
+                        </button>
+                      </div>
+                      <ul class="tt-bucklist-ul" id="bucklistUl-121-150"></ul>
+                    </div>
+                    <div class="tt-bucklist-cell" data-buck-range="151-180">
+                      <div class="tt-bucklist-cell-head">
+                        <span class="tt-bucklist-head-title">151 – 180</span>
+                        <span class="tt-bucklist-head-count badge rounded-pill bg-white text-primary border border-primary border-opacity-25">0</span>
+                      </div>
+                      <div class="tt-bucklist-cell-tools">
+                        <button type="button" class="btn tt-bucklist-setup-btn" data-buck-setup="151-180" title="Applications done, new hire, save to profiles (schedule in 6-Month Service)">
+                          <i class="bi bi-gear-wide-connected"></i><span>Band setup</span>
+                        </button>
+                      </div>
+                      <ul class="tt-bucklist-ul" id="bucklistUl-151-180"></ul>
+                    </div>
+                    <div class="tt-bucklist-cell" data-buck-range="gt180">
+                      <div class="tt-bucklist-cell-head">
+                        <span class="tt-bucklist-head-title">&gt; 180</span>
+                        <span class="tt-bucklist-head-count badge rounded-pill bg-white text-primary border border-primary border-opacity-25">0</span>
+                      </div>
+                      <div class="tt-bucklist-cell-tools">
+                        <button type="button" class="btn tt-bucklist-setup-btn" data-buck-setup="gt180" title="Applications done, new hire, save to profiles (schedule in 6-Month Service)">
+                          <i class="bi bi-gear-wide-connected"></i><span>Band setup</span>
+                        </button>
+                      </div>
+                      <ul class="tt-bucklist-ul" id="bucklistUl-gt180"></ul>
+                    </div>
+                  </div>
+
+                  <div id="bucklistWavePanel" class="tt-bucklist-wave-panel d-none mb-4" aria-label="Expanded bucket view">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                      <h2 class="h6 mb-0 fw-bold text-primary" id="bucklistWaveTitle">—</h2>
+                      <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <button type="button" class="btn btn-sm btn-primary" id="bucklistWaveSetupBtn" title="Applications, new hire — save only; schedule in 6-Month Service">
+                          <i class="bi bi-gear-wide-connected me-1"></i> Band setup
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="bucklistWaveDownloadBtn" title="Download this band’s table as CSV (respects search)">
+                          <i class="bi bi-download me-1"></i> Download
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="bucklistWaveCloseBtn">Close</button>
+                      </div>
+                    </div>
+                    <p class="text-muted small mb-3" id="bucklistWaveHint">Open a band to see candidates and workflow actions.</p>
+                    <div class="table-responsive tt-bucklist-band-table-wrap border rounded-3 bg-white">
+                      <table class="table table-sm table-hover align-middle mb-0 tt-bucklist-band-table">
+                        <thead class="table-light">
+                          <tr>
+                            <th scope="col">Candidate</th>
+                            <th scope="col">Progress</th>
+                            <th scope="col">Day</th>
+                            <th scope="col" class="text-end" title="From candidate profile (smart baseline). Progress column shows 6-month plan sent/total.">Apps done <span class="text-danger">*</span></th>
+                            <th scope="col">Status</th>
+                            <th scope="col" class="text-end">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody id="bucklistWaveTbody"></tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div id="bucklistPeekPanel" class="d-none mb-4">
+                    <div class="card tt-card border border-primary border-opacity-35 shadow-sm">
+                      <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
+                        <span class="fw-semibold small mb-0">Candidate (Bucklist)</span>
+                        <button type="button" class="btn-close" id="bucklistPeekCloseBtn" aria-label="Close"></button>
+                      </div>
+                      <div class="card-body small py-3" id="bucklistPeekBody"></div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Runs -->
+        <section id="tab-runs" class="tt-tab d-none">
+          <div class="card tt-card">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                  <div class="tt-h">Runs & Reports</div>
+                  <div class="text-muted small">
+                    Set the <strong>date filter</strong> (Today, Yesterday, custom range, or All time) to choose which runs are included.
+                    Then use the green button to download <strong>one file</strong> with columns:
+                    <strong>Enrollment ID</strong> column = full <strong>JSA URL</strong> (<code>https://backend.terratern.com/jsa-enrollment/update?id=…</code> from each candidate’s enrollment id). <strong>Report Path</strong> = absolute path to the CSV under this app’s <code>reports\run_…</code> folder (comma CSV for Excel / your company CRM).
+                    Open <strong>Reports</strong> on a row for individual CSV downloads.
+                  </div>
+                </div>
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                  <input class="form-control form-control-sm tt-search" id="runsSearch"
+                    placeholder="Search run id / candidate…" />
+                  <select class="form-select form-select-sm" id="runsStatusFilter" style="min-width:170px;">
+                    <option value="">All Status</option>
+                    <option value="queued">Queued</option>
+                    <option value="running">Running</option>
+                    <option value="paused_network">Paused (Network)</option>
+                    <option value="done">Done</option>
+                    <option value="failed">Failed</option>
+                    <option value="stopped">Stopped</option>
+                  </select>
+                  <select class="form-select form-select-sm" id="runsModeFilter" style="min-width:200px;" title="“All run types” shows every run. Other options narrow by how the run was started.">
+                    <option value="">All run types</option>
+                    <option value="batch">Batch / scheduler (batch_…)</option>
+                    <option value="all">CRM-wide (mode: all)</option>
+                    <option value="single">Selected candidates (mode: single)</option>
+                  </select>
+                  <select class="form-select form-select-sm" id="runsDateFilter" style="min-width:180px;" title="Filter by run Created date (your browser’s local calendar).">
+                    <option value="all">All time</option>
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="7">Last 7 days (rolling)</option>
+                    <option value="30">Last 30 days (rolling)</option>
+                    <option value="custom">Custom range…</option>
+                  </select>
+                  <span id="runsDateCustomWrap" class="d-none">
+                    <span class="d-flex gap-1 align-items-center flex-wrap">
+                      <input type="date" class="form-control form-control-sm" id="runsDateFrom" title="From (created date)" style="width:auto;min-width:132px;" />
+                      <span class="text-muted small">→</span>
+                      <input type="date" class="form-control form-control-sm" id="runsDateTo" title="To (created date, inclusive)" style="width:auto;min-width:132px;" />
+                    </span>
+                  </span>
+                  <select class="form-select form-select-sm" id="runsPaFilter" style="min-width:220px;">
+                    <option value="">All PA Members</option>
+                  </select>
+                  <button class="btn btn-outline-secondary btn-sm" id="runsRefreshBtn"><i
+                      class="bi bi-arrow-clockwise"></i> Refresh</button>
+                  <button class="btn btn-outline-primary btn-sm" id="runsClearFiltersBtn" type="button"
+                    title="Reset search and filters so every loaded run can appear">
+                    <i class="bi bi-funnel"></i> Clear filters
+                  </button>
+                  <button class="btn btn-success btn-sm" id="runsCrmManifestByDateBtn" type="button"
+                    title="CSV: JSA enrollment URL, candidate name, absolute report file path under this CRM. Uses the date filter for which runs are included.">
+                    <i class="bi bi-file-earmark-spreadsheet"></i> Download CRM report (Enrollment ID · Candidates · Report path)
+                  </button>
+                </div>
+              </div>
+              <div id="runsListMeta" class="text-muted small mt-2"></div>
+
+              <div class="tt-table-wrap mt-3" style="max-height: min(75vh, 900px); overflow: auto;">
+                <table class="table table-sm align-middle tt-table">
+                  <thead>
+                    <tr>
+                      <th>Run ID</th>
+                      <th>Status</th>
+                      <th>Mode</th>
+                      <th>PA Member(s)</th>
+                      <th>Candidates</th>
+                      <th>Targets</th>
+                      <th>Sent</th>
+                      <th>Failed</th>
+                      <th title="SMTP recipient rejections + optional inbox bounce scan. CSV reports omit these addresses.">Bounced</th>
+                      <th>Created</th>
+                      <th>Controls</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="runsTbody"></tbody>
+                </table>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- Role Analysis -->
+        <section id="tab-role-analysis" class="tt-tab d-none" style="height: calc(100vh - 110px); overflow: hidden;">
+          <div class="card tt-card h-100" id="roleAnalysisCard">
+            <div class="card-body p-4 h-100 d-flex flex-column">
+              <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-2">
+                <div class="flex-grow-1" style="max-width: 720px;">
+                  <div class="tt-h mb-1">Role Analysis</div>
+                  <p class="text-muted small mb-2 mb-lg-3">Organize people by job role: use the <strong>board</strong> to drag role tags into folders, or the <strong>table</strong> to search and use Cut / Paste. Click a folder title to see the full list.</p>
+                  <button class="btn btn-link btn-sm text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#roleTipsCollapse" aria-expanded="false" aria-controls="roleTipsCollapse">
+                    <i class="bi bi-info-circle me-1"></i>Quick tips
+                  </button>
+                  <div class="collapse mt-2" id="roleTipsCollapse">
+                    <div class="alert alert-light border small mb-0 py-2">
+                      <ul class="mb-0 ps-3">
+                        <li><strong>Board:</strong> Drag a role tag from a blue card into a green folder, or add folders with <strong>New folder</strong>.</li>
+                        <li><strong>Table:</strong> <strong>Cut</strong> someone, switch to <strong>Board</strong>, then <strong>Paste</strong> on a folder.</li>
+                        <li><strong>Resize:</strong> Drag the bar between the green and blue areas.</li>
+                        <li><strong>Export:</strong> Excel report for all roles and groups.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap align-items-start">
+                  <span class="align-self-center small text-muted d-none" id="roleAnalysisLoadState" aria-live="polite"></span>
+                  <button type="button" class="btn btn-success btn-sm" id="roleAddGroupBtn" title="Create a folder"><i class="bi bi-folder-plus me-1"></i> New folder</button>
+                  <button type="button" class="btn btn-primary btn-sm" id="roleExportBtn" title="Download Excel"><i class="bi bi-file-earmark-excel me-1"></i> Export</button>
+                  <button type="button" class="btn btn-outline-secondary btn-sm" id="roleRefreshBtn" title="Reload"><i class="bi bi-arrow-clockwise me-1"></i> Refresh</button>
+                  <button type="button" class="btn btn-outline-dark btn-sm" id="roleToggleSidebarBtn" title="Wider workspace"><i class="bi bi-arrows-fullscreen"></i></button>
+                </div>
+              </div>
+
+              <div class="tt-role-toolbar card border-0 shadow-sm mb-3">
+                <div class="card-body py-3 px-3">
+                  <div class="row g-3 align-items-end">
+                    <div class="col-12 col-xl-5">
+                      <div class="small text-muted text-uppercase fw-semibold mb-2">At a glance</div>
+                      <div class="d-flex flex-wrap gap-3 gap-xl-4">
+                        <span class="text-nowrap"><span class="text-muted small">People</span> <strong class="text-primary fs-5 ms-1" id="roleStatCandidates">0</strong></span>
+                        <span class="text-nowrap" title="Role labels from profiles"><span class="text-muted small">Role tags</span> <strong class="text-dark fs-6 ms-1" id="roleStatRoles">0</strong></span>
+                        <span class="text-nowrap" title="Auto-grouped families"><span class="text-muted small">Smart groups</span> <strong class="text-dark fs-6 ms-1" id="roleStatSmartGroups">0</strong></span>
+                        <span class="text-nowrap" title="Your folders"><span class="text-muted small">My folders</span> <strong class="text-success fs-6 ms-1" id="roleStatFolders">0</strong></span>
+                      </div>
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                      <div class="small text-muted text-uppercase fw-semibold mb-2">View</div>
+                      <div class="btn-group w-100" role="group" aria-label="Role analysis layout">
+                        <input type="radio" class="btn-check" name="roleViewMode" id="roleViewGroups" value="groups" checked autocomplete="off">
+                        <label class="btn btn-outline-primary btn-sm" for="roleViewGroups" title="Folders and drag-and-drop"><i class="bi bi-grid-3x3-gap me-1"></i> Board</label>
+                        <input type="radio" class="btn-check" name="roleViewMode" id="roleViewIndividual" value="individual" autocomplete="off">
+                        <label class="btn btn-outline-primary btn-sm" for="roleViewIndividual" title="Spreadsheet and Cut/Paste"><i class="bi bi-table me-1"></i> Table</label>
+                      </div>
+                      <div class="small text-muted mt-1" id="roleViewModeHint">Folders and draggable tags</div>
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-4">
+                      <div class="small text-muted text-uppercase fw-semibold mb-2">Find</div>
+                      <div class="input-group input-group-sm mb-2">
+                        <span class="input-group-text bg-white"><i class="bi bi-search" aria-hidden="true"></i></span>
+                        <input type="search" id="roleSearchInput" class="form-control" placeholder="Name, email, role, folder…" autocomplete="off" aria-label="Search">
+                        <button type="button" class="btn btn-outline-secondary" id="roleSearchClearBtn" title="Clear" aria-label="Clear search"><i class="bi bi-x-lg"></i></button>
+                      </div>
+                      <label class="visually-hidden" for="roleFilterSelect">Filter list</label>
+                      <select id="roleFilterSelect" class="form-select form-select-sm">
+                        <option value="">All groups &amp; roles</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-0 flex-grow-1" style="min-height: 0;">
+                <!-- Main Workspace Area - Expanded to col-12 Full Width -->
+                <div id="roleWorkspaceContainer" class="col-12 d-flex flex-column h-100"
+                  style="overflow: hidden; gap: 0;">
+
+                  <!-- TOP CARD: Folders Workspace (V14.0 30% Default) -->
+                  <div id="rolePaneTop" class="tt-card d-flex flex-column mb-0"
+                    style="flex: 0 0 30%; min-height: 80px; border: 2px solid #10b981 !important; background: #f0fff4 !important; overflow: hidden;">
+                    <div
+                      class="card-header border-bottom py-2 px-3 d-flex justify-content-between align-items-center flex-shrink-0"
+                      style="background: rgba(16,185,129,0.1); min-height: 28px;">
+                      <div class="mb-0">
+                        <div class="tt-sub text-success mb-0" style="font-size: 0.75rem; font-weight: 800;"><i class="bi bi-folder2-open me-2"></i>Your folders</div>
+                        <div class="small text-muted d-none d-md-block" style="font-size: 0.7rem;">Drop role tags here or paste from the table.</div>
+                      </div>
+                      <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 d-none d-sm-inline" style="font-size: 0.65rem;">Resize below</span>
+                    </div>
+                    <div id="roleFoldersScroll" class="flex-grow-1 p-2" style="overflow-y: auto; overflow-x: hidden;">
+                      <div id="roleFoldersWorkspace" class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-1">
+                        <!-- Custom Folder Cards injected via JS -->
+                      </div>
+                      <div id="roleFoldersEmptyHint" class="text-center text-muted small py-4 d-none">No folders yet. Click <strong>New folder</strong>, then drag role tags from below.</div>
+                    </div>
+                  </div>
+
+                  <!-- PROFESSIONAL RESIZER HANDLE -->
+                  <div id="roleResizer" class="tt-resizer-v pro-resizer" role="separator" aria-orientation="horizontal" title="Drag to resize folder area">
+                    <div class="resizer-handle-icon">
+                      <span></span><span></span><span></span>
+                    </div>
+                  </div>
+
+                  <!-- BOTTOM CARD: Source Area (V14.0 70% Default) -->
+                  <div id="rolePaneBottom" class="tt-card d-flex flex-column mb-0"
+                    style="flex: 1 1 0; min-height: 100px; border: 2px solid #2563eb !important; overflow: hidden;">
+                    <div
+                      class="card-header border-bottom py-2 px-3 d-flex justify-content-between align-items-center flex-shrink-0"
+                      style="background: rgba(37,99,235,0.05); min-height: 28px;">
+                      <div class="mb-0">
+                        <div class="tt-sub text-primary mb-0" style="font-size: 0.75rem; font-weight: 800;"><i class="bi bi-layers me-2"></i>Roles by group</div>
+                        <div class="small text-muted d-none d-md-block" style="font-size: 0.7rem;">Smart groups from candidate role text. Drag tags into folders above.</div>
+                      </div>
+                      <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 d-none d-sm-inline" style="font-size: 0.65rem;">Resize above</span>
+                    </div>
+                    <div id="roleSourceScroll" class="flex-grow-1 p-2" style="overflow-y: auto; overflow-x: hidden;">
+
+                      <!-- Grid View for Smart Groups (Source) -->
+                      <div id="roleGridContainer" class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-2">
+                        <!-- Cards injected via JS -->
+                      </div>
+                      <div id="roleGridEmptyHint" class="text-center text-muted small py-5 d-none">
+                        <p class="mb-2">Nothing matches your search or filter.</p>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="roleClearFiltersBtn">Clear search and filter</button>
+                      </div>
+
+                      <!-- Table View (Source) -->
+                      <div id="roleTableContainer" class="d-none">
+                        <div class="tt-table-wrap tt-role-table-wrap">
+                          <table class="table table-sm align-middle tt-table table-hover">
+                            <thead class="table-light sticky-top">
+                              <tr>
+                                <th scope="col">Role / group</th>
+                                <th scope="col">First name</th>
+                                <th scope="col">Last name</th>
+                                <th scope="col">Email</th>
+                                <th scope="col">Industries</th>
+                                <th scope="col">Resume</th>
+                                <th scope="col">Enrol. ID</th>
+                                <th scope="col">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody id="roleAnalysisTbody"></tbody>
+                          </table>
+                        </div>
+                        <div class="small text-muted mt-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                          <span id="roleTableSummary">—</span>
+                          <span class="d-none d-md-inline" style="font-size:0.8rem">Table: <strong>Cut</strong>, then <strong>Board</strong> and <strong>Paste</strong> on a folder.</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Results Workspace -->
+        <section id="tab-results" class="tt-tab d-none">
+          <div class="card tt-card">
+            <div class="card-body">
+
+              <!-- Header -->
+              <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+                <div>
+                  <div class="tt-h mb-0">Results (Email Milestones)</div>
+                  <div class="text-muted small">Assessments, Interviews and Job Offers parsed from candidate inboxes.
+                  </div>
+                </div>
+                <button class="btn btn-outline-primary btn-sm" id="resSyncAllBtn" onclick="syncAllStatus()">
+                  <i class="bi bi-arrow-repeat me-1"></i>Sync All Emails
+                </button>
+              </div>
+
+              <!-- Stats Cards (3 only) -->
+              <div class="row g-3 mb-4">
+                <div class="col-4">
+                  <div class="card border-0 shadow-sm text-center p-3 h-100">
+                    <div class="text-muted small mb-1">Assessments</div>
+                    <div class="h3 fw-bold text-primary mb-0" id="statAssessments">0</div>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="card border-0 shadow-sm text-center p-3 h-100">
+                    <div class="text-muted small mb-1">Interviews</div>
+                    <div class="h3 fw-bold text-warning mb-0" id="statInterviews">0</div>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="card border-0 shadow-sm text-center p-3 h-100">
+                    <div class="text-muted small mb-1">Job Offers</div>
+                    <div class="h3 fw-bold text-success mb-0" id="statOffers">0</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Filters & Milestones Table -->
+              <div class="card tt-card">
+                <div class="card-body">
+                  <div class="row g-2 mb-3 align-items-center">
+                    <div class="col-md-3">
+                      <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                          <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" class="form-control border-start-0" id="resSearchInput"
+                          placeholder="Search candidate, company, role..." oninput="filterResults()" autocomplete="off">
+                      </div>
+                    </div>
+                    <div class="col-md-2">
+                      <select class="form-select" id="resStatusFilter" onchange="filterResults()">
+                        <option value="all">All Event Types</option>
+                        <option value="Assessment">Assessment</option>
+                        <option value="Interview">Interview</option>
+                        <option value="Offer">Offer</option>
+                      </select>
+                    </div>
+                    <div class="col-md-2">
+                      <select class="form-select" id="resPoFilter" onchange="filterResults()">
+                        <option value="all">All Placement Officers</option>
+                      </select>
+                    </div>
+                    <div class="col-md-3">
+                      <div class="form-check form-switch mt-1">
+                        <input class="form-check-input" type="checkbox" id="resHideUnknownSwitch"
+                          onchange="filterResults()">
+                        <label class="form-check-label small" for="resHideUnknownSwitch">Hide Unknown Candidates</label>
+                      </div>
+                    </div>
+                    <div class="col-md-2 text-end">
+                      <span class="badge bg-light text-dark rounded-pill" id="resultsCountBadge">0</span>
+                    </div>
+                  </div>
+
+                  <div class="tt-table-wrap">
+                    <table class="table align-middle tt-table">
+                      <thead class="table-light">
+                        <tr>
+                          <th style="width: 150px;">Received Date</th>
+                          <th>Candidate</th>
+                          <th>Placement Officer</th>
+                          <th>Company</th>
+                          <th>Role</th>
+                          <th style="width: 120px;">Event Type</th>
+                          <th>Email Subject</th>
+                          <th class="text-end" style="width: 60px;">Del</th>
+                        </tr>
+                      </thead>
+                      <tbody id="resultsTbody">
+                        <tr>
+                          <td colspan="7" class="text-center py-5 text-muted">
+                            Press <strong>Sync All Emails</strong> to fetch milestones from candidate inboxes.
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- Admin / Manager Workspace -->
+        {% if session.get('role') in ['admin', 'manager'] %}
+        <section id="tab-admin" class="tt-tab d-none">
+          <div class="card tt-card">
+            <div class="card-body">
+              <div class="tt-h mb-2">{% if session.get('role') == 'admin' %}Admin panel{% else %}Manager panel{% endif %}</div>
+              <p class="text-muted small mb-3">Manage user approvals, roles, and pending data changes.</p>
+
+              <ul class="nav nav-pills gap-2 mb-4 flex-wrap" id="adminPanelTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active rounded-pill px-4" id="adminTabChanges" data-bs-toggle="pill" data-bs-target="#adminPaneChanges" type="button" role="tab">Pending changes</button>
+                </li>
+                {% if session.get('role') == 'admin' %}
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link rounded-pill px-4" id="adminTabPending" data-bs-toggle="pill" data-bs-target="#adminPanePending" type="button" role="tab">New accounts</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link rounded-pill px-4" id="adminTabAll" data-bs-toggle="pill" data-bs-target="#adminPaneAll" type="button" role="tab">All users & roles</button>
+                </li>
+                {% endif %}
+              </ul>
+
+              <div class="tab-content">
+                <!-- Pending Changes Tab -->
+                <div class="tab-pane fade show active" id="adminPaneChanges" role="tabpanel">
+                  <p class="text-muted small mb-3">Data change requests submitted by staff accounts.</p>
+                  <div class="tt-table-wrap">
+                    <table class="table align-middle tt-table" id="adminChangesTable">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Date</th>
+                          <th>Submitted By</th>
+                          <th>Candidate</th>
+                          <th>Change Type</th>
+                          <th class="text-end">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="adminChangesTbody">
+                        <tr>
+                          <td colspan="5" class="text-center py-4 text-muted">Loading…</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {% if session.get('role') == 'admin' %}
+                <!-- Pending Accounts Tab -->
+                <div class="tab-pane fade" id="adminPanePending" role="tabpanel">
+                  <p class="text-muted small mb-3">Verified email, waiting for your approval.</p>
+                  <div class="tt-table-wrap">
+                    <table class="table align-middle tt-table" id="adminUsersTable">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Registered</th>
+                          <th>Username</th>
+                          <th>Email</th>
+                          <th class="text-end">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="adminUsersTbody">
+                        <tr>
+                          <td colspan="4" class="text-center py-4 text-muted">Loading…</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- All Users & Roles Tab -->
+                <div class="tab-pane fade" id="adminPaneAll" role="tabpanel">
+                  <p class="text-muted small mb-3">Manage user roles and feature access restrictions.</p>
+                  <div class="tt-table-wrap">
+                    <table class="table align-middle tt-table">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Username</th>
+                          <th>Email</th>
+                          <th>Role</th>
+                          <th>Features</th>
+                          <th class="text-end">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="adminAllUsersTbody">
+                        <tr>
+                          <td colspan="5" class="text-center py-4 text-muted">Open this tab to load.</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </section>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Target Modal -->
+  <div class="modal fade" id="targetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="targetModalTitle">Target</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="tId" />
+          <div class="row g-2">
+            <div class="col-md-6">
+              <label class="form-label">Company Name</label>
+              <input class="form-control" id="tCompany" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Role (optional)</label>
+              <input class="form-control" id="tRole" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">HR Email</label>
+              <input class="form-control" id="tEmail" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Country</label>
+              <select class="form-select" id="tCountry">
+                <option value="Canada">Canada</option>
+                <option value="Germany">Germany</option>
+                <option value="Australia">Australia</option>
+                <option value="Austria">Austria</option>
+                <option value="Luxembourg">Luxembourg</option>
+                <option value="Netherlands">Netherlands</option>
+                <option value="Ireland">Ireland</option>
+                <option value="Sweden">Sweden</option>
+                <option value="UAE">UAE</option>
+                <option value="Switzerland">Switzerland</option>
+                <option value="India">India</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">HR Name</label>
+              <input class="form-control" id="tName" placeholder="Nil" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Industry</label>
+              <input class="form-control" id="tIndustry" placeholder="e.g. Technology, Medical, Retail" />
+            </div>
+            <div class="col-12">
+              <div class="alert alert-info small mb-0">Target is validated on save.</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-danger me-auto" id="tDeleteBtn" style="display:none;">Delete</button>
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button class="btn btn-primary" id="tSaveBtn">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reports Modal -->
+  <div class="modal fade" id="reportsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Candidate Reports</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="small text-muted mb-2">
+            CSV format: company_name, role, country, date, hr_name.
+            <strong>Bounced / rejected HR emails are not included</strong> (for CRM import). Use the Bounced column on the run for totals.
+          </div>
+          <div class="alert alert-light border small py-2 mb-3">
+            <strong>Company CRM upload sheet:</strong> download one <strong>CSV</strong> with
+            <em>Enrollment ID</em> (JSA <code>update?id=…</code> link), <em>Candidates</em>, and <em>Report Path</em> (absolute <code>reports\run_…\*.csv</code> on this machine) for your company CRM.
+            When a run finishes in <strong>this browser tab</strong>, that sheet is downloaded automatically.
+          </div>
+          <div class="list-group" id="reportsList"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-success" id="reportsCrmManifestBtn"
+            title="JSA enrollment URL, candidate name, absolute report CSV path (Excel / CRM import)">
+            <i class="bi bi-file-earmark-spreadsheet"></i> CRM upload sheet (all candidates)
+          </button>
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="modal fade" id="deleteRunModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Delete Run</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-warning mb-0">
+            <div class="fw-semibold">This will remove the run from Runs & Reports.</div>
+            <div class="small">Reports for this run will also be removed.</div>
+          </div>
+          <input type="hidden" id="deleteRunId" />
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-danger" id="confirmDeleteRunBtn"><i class="bi bi-trash"></i> Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Workspace Modal -->
+  <div class="modal fade" id="wsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Workspace Settings</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="wsId" />
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Workspace Name</label>
+              <input class="form-control" id="wsName" placeholder="e.g. Tech Outreach - 2026" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Target Industry</label>
+              <select class="form-select" id="wsIndustry">
+                <option value="Default">Default</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Target Country</label>
+              <select class="form-select" id="wsCountry">
+                <option value="Global">Global (All)</option>
+                <option value="Canada">Canada</option>
+                <option value="Germany">Germany</option>
+                <option value="Australia">Australia</option>
+                <option value="Austria">Austria</option>
+                <option value="Luxembourg">Luxembourg</option>
+                <option value="Netherlands">Netherlands</option>
+                <option value="Ireland">Ireland</option>
+                <option value="Sweden">Sweden</option>
+                <option value="UAE">UAE</option>
+                <option value="Switzerland">Switzerland</option>
+                <option value="India">India</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Assigned Candidate (Sender)</label>
+              <select class="form-select" id="wsCandidateId"></select>
+            </div>
+
+            <div class="col-12">
+              <hr>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Automation Configuration</h6>
+                <div class="btn-group btn-group-sm" role="group">
+                  <input type="radio" class="btn-check" name="wsType" id="wsTypeInterval" value="interval" checked>
+                  <label class="btn btn-outline-secondary" for="wsTypeInterval">Interval Based</label>
+                  <input type="radio" class="btn-check" name="wsType" id="wsTypeSchedule" value="schedule">
+                  <label class="btn btn-outline-secondary" for="wsTypeSchedule">Service Plan</label>
+                </div>
+              </div>
+            </div>
+
+            <div id="wsIntervalFields">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Interval (Days)</label>
+                  <input class="form-control" type="number" id="wsInterval" value="2" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Emails per Batch</label>
+                  <input class="form-control" type="number" id="wsBatchSize" value="10" />
+                </div>
+              </div>
+            </div>
+
+            <div id="wsScheduleFields" class="d-none">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label d-block">Scheduled Days</label>
+                  <div class="d-flex flex-wrap gap-3">
+                    <div class="form-check">
+                      <input class="form-check-input ws-day-chk" type="checkbox" value="Monday" id="chkMon">
+                      <label class="form-check-label" for="chkMon">Mon</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input ws-day-chk" type="checkbox" value="Tuesday" id="chkTue" checked>
+                      <label class="form-check-label" for="chkTue">Tue</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input ws-day-chk" type="checkbox" value="Wednesday" id="chkWed" checked>
+                      <label class="form-check-label" for="chkWed">Wed</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input ws-day-chk" type="checkbox" value="Thursday" id="chkThu" checked>
+                      <label class="form-check-label" for="chkThu">Thu</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input ws-day-chk" type="checkbox" value="Friday" id="chkFri" checked>
+                      <label class="form-check-label" for="chkFri">Fri</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input ws-day-chk" type="checkbox" value="Saturday" id="chkSat">
+                      <label class="form-check-label" for="chkSat">Sat</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input ws-day-chk" type="checkbox" value="Sunday" id="chkSun">
+                      <label class="form-check-label" for="chkSun">Sun</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Monthly Email Target</label>
+                  <input class="form-control" type="number" id="wsMonthlyTarget" value="200" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Service Duration</label>
+                  <select class="form-select" id="wsServiceDuration">
+                    <option value="1">1 Month</option>
+                    <option value="3">3 Months</option>
+                    <option value="6" selected>6 Months</option>
+                    <option value="12">12 Months</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Service Start Date</label>
+                  <input class="form-control" type="date" id="wsServiceStart" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Service End Date</label>
+                  <input class="form-control" type="date" id="wsServiceEnd" readonly />
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <div class="row g-3 mt-1">
+                <div class="col-md-4">
+                  <div class="form-check form-switch mt-2">
+                    <input class="form-check-input" type="checkbox" id="wsAutoEnabled">
+                    <label class="form-check-label" for="wsAutoEnabled">Active Automation</label>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Total Max Emails</label>
+                  <input class="form-control" type="number" id="wsMaxEmails" value="1000" />
+                </div>
+                <div class="col-md-12">
+                  <label class="form-label">Next Scheduled Run (Civilian AM/PM)</label>
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <input class="form-control" type="date" id="wsNextRunDate">
+                    </div>
+                    <div class="col-2">
+                      <select class="form-select" id="wsNextRunHour">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9" selected>9</option>
+                        <option value="10">10</option>
+                        <option value="11">11</option>
+                        <option value="12">12</option>
+                      </select>
+                    </div>
+                    <div class="col-2">
+                      <select class="form-select" id="wsNextRunMinute">
+                        <option value="00">00</option>
+                        <option value="15">15</option>
+                        <option value="30">30</option>
+                        <option value="45">45</option>
+                      </select>
+                    </div>
+                    <div class="col-2">
+                      <select class="form-select" id="wsNextRunAmPm">
+                        <option value="AM" selected>AM</option>
+                        <option value="PM">PM</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <div class="alert alert-info small mb-0">
+                Reports will be available in the "Runs & Reports" tab under the mode <code>batch_10_IndustryName</code>.
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-danger me-auto" id="wsDeleteBtn">Delete Workspace</button>
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button class="btn btn-primary" id="wsSaveBtn">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <datalist id="placementOfficerRosterList"></datalist>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/static/js/dashboard.js?v=51.0"></script>
+
+
+  <!-- Restore Backup Modal -->
+  <div class="modal fade" id="candRestoreModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Restore Candidates Backup</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="small text-muted">Upload the ZIP you downloaded from <strong>Backup</strong>. It will re-import
+            candidates and restore PDFs.</div>
+          <div class="mt-3">
+            <input class="form-control" type="file" id="candRestoreZip" accept=".zip" />
+          </div>
+          <div class="form-check mt-3">
+            <input class="form-check-input" type="checkbox" id="candRestoreReplace" />
+            <label class="form-check-label" for="candRestoreReplace">
+              Replace existing candidates (danger)
+            </label>
+            <div class="small text-danger mt-1">If enabled, current candidates will be removed before restoring.</div>
+          </div>
+          <div class="alert alert-warning mt-3 mb-0 small">
+            This backup contains <strong>Gmail App Passwords</strong>. Restore only from a trusted file.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-success" id="candRestoreDoBtn"><i class="bi bi-upload"></i> Restore Now</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Folder / Group Detail Modal -->
+
+  <!-- Workflow Plan Creation Modal -->
+  <div class="modal fade" id="wfNewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Initialize Workflow Plan</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" for="wfCandSelect">Select Candidate</label>
+            <div class="input-group input-group-sm mb-2">
+              <span class="input-group-text" id="wfCandSearchAddon"><i class="bi bi-search" aria-hidden="true"></i></span>
+              <input
+                type="search"
+                class="form-control"
+                id="wfCandSearchInput"
+                placeholder="Search by name, email, ID…"
+                autocomplete="off"
+                aria-describedby="wfCandSearchHelp"
+                aria-label="Search candidates for workflow plan"
+              />
+              <button type="button" class="btn btn-outline-primary" id="wfCandSearchApplyBtn" title="Apply search filter">
+                <i class="bi bi-search me-1"></i>Search
+              </button>
+              <button type="button" class="btn btn-outline-secondary" id="wfCandSearchClearBtn" title="Clear search and show everyone">Clear</button>
+            </div>
+            <div class="form-text mb-2" id="wfCandSearchHelp">
+              Type and click <strong>Search</strong> or press <strong>Enter</strong> to narrow the list. Choose from the dropdown as usual.
+            </div>
+            <select class="form-select" id="wfCandSelect" size="8">
+              <option value="">-- Choose Candidate --</option>
+            </select>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small">Days in service so far</label>
+              <input type="number" class="form-control" id="wfInitialDays" value="0" min="0">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small">Applications already sent</label>
+              <div class="input-group">
+                <input type="number" class="form-control" id="wfInitialApplied" value="0" min="0">
+                <button class="btn btn-outline-secondary" id="wfSyncNewBtn" type="button" title="Sync with Database">🔄 Sync</button>
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <div class="small text-muted" id="wfCalcHint">
+              Enter days and applied count to see required progress.
+            </div>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small">Target Country</label>
+              <input type="text" class="form-control" id="wfCountry" list="wfCountryList" placeholder="e.g. US, UK, Canada">
+              <datalist id="wfCountryList"></datalist>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small">Target Industry</label>
+              <input type="text" class="form-control" id="wfIndustry" list="wfIndustryList" placeholder="e.g. Software, Finance">
+              <datalist id="wfIndustryList"></datalist>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small">Scheduled Start Time (Civilian)</label>
+            <div class="input-group input-group-sm">
+              <input type="date" class="form-control px-2" id="wfStartDate">
+              <select class="form-select px-1 text-center" id="wfStartHour" style="max-width: 55px;">
+                <option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12" selected>12</option>
+              </select>
+              <span class="input-group-text px-1">:</span>
+              <input type="number" class="form-control px-1 text-center" id="wfStartMinute" value="00" min="0" max="59" step="1" style="max-width: 70px;" placeholder="MM">
+              <select class="form-select px-1 text-center" id="wfStartAmPm" style="max-width: 65px;">
+                <option value="AM">A.M.</option><option value="PM" selected>P.M.</option>
+              </select>
+            </div>
+          </div>
+          <div class="alert alert-info small">
+            <strong>Simple setup:</strong> Fill only these fields:
+            <em>Days in service</em>, <em>Applications already sent</em>, <em>Target Country</em>, <em>Target Industry</em>, and <em>Scheduled Start Time</em>.
+            The system auto-calculates phase, batch size, and full 6-month workflow up to 1200.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary" id="wfSavePlanBtn">🚀 Create Plan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bucklist: band setup (applications / backlog + optional new candidate; scheduling in 6-Month Service) -->
+  <div class="modal fade" id="bucklistBandSetupModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header border-0 pb-0">
+          <div>
+            <h5 class="modal-title fw-bold" id="bucklistSetupTitle">Band setup</h5>
+            <p class="text-muted small mb-0" id="bucklistSetupSubtitle"></p>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body pt-3">
+          <div class="alert alert-primary border-0 bg-primary bg-opacity-10 small mb-3">
+            <strong>Applications &amp; backlog:</strong> Enter <strong>job applications completed till now</strong> (manual + CRM) for <strong>new hires only</strong>. Set <strong>Day in band</strong> to match <strong>Service day count</strong> on the 6-Month calculator — the line below uses that day for on-track targets (e.g. day 30 → 100). <strong>Save</strong> stores tenure day + apps baseline here — use <strong>6-Month Service</strong> for <strong>HR target country/industry</strong>, scheduling, and workflow plans.
+            <div class="small mt-2 mb-0 text-body-secondary" id="bucklistSetupBacklogHint" aria-live="polite"></div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="bucklistSetupBandSelect">Tenure band</label>
+              <select class="form-select" id="bucklistSetupBandSelect">
+                <option value="0-30">0 – 30</option>
+                <option value="31-60">31 – 60</option>
+                <option value="61-90">61 – 90</option>
+                <option value="91-120">91 – 120</option>
+                <option value="121-150">121 – 150</option>
+                <option value="151-180">151 – 180</option>
+                <option value=">180">&gt; 180</option>
+              </select>
+              <div class="form-text d-none text-info small" id="bucklistSetupBandLockedHint">Band is fixed from the column you clicked.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="bucklistSetupSharedApplied">Applications completed till now <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" id="bucklistSetupSharedApplied" min="0" step="1" value="0" placeholder="0" />
+              <div class="form-text" id="bucklistSetupSharedAppliedHint"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="bucklistSetupEnrollmentStatus">Enrollment status (new candidate)</label>
+              <select class="form-select" id="bucklistSetupEnrollmentStatus">
+                <option value="Ongoing" selected>Ongoing</option>
+                <option value="On Hold">On Hold</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+          </div>
+
+          <details class="border rounded-3 mb-4 bg-light" open>
+            <summary class="fw-semibold px-3 py-2" style="cursor:pointer;">New candidate (optional — same as Candidates tab)</summary>
+            <div class="px-3 pb-3 pt-0">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label small">Day in band <span class="text-danger">*</span> <span class="text-muted fw-normal">(when adding new)</span></label>
+                  <input type="number" class="form-control" id="bucklistNewCandDay" min="0" step="1" />
+                  <div class="form-text" id="bucklistNewCandDayHint"></div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Full name <span class="text-danger">*</span></label>
+                  <input class="form-control" id="bucklistNewCandName" placeholder="e.g. Jane Doe" autocomplete="name" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Gmail <span class="text-danger">*</span></label>
+                  <input class="form-control" id="bucklistNewCandEmail" placeholder="user@gmail.com" autocomplete="email" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">App password</label>
+                  <input class="form-control" id="bucklistNewCandAppPwd" type="password" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">PA member</label>
+                  <input class="form-control" id="bucklistNewCandPaMember" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">RM member</label>
+                  <input class="form-control" id="bucklistNewCandRmMember" list="placementOfficerRosterList" autocomplete="off" placeholder="Relationship manager name" />
+                  <div class="form-text">Saved to the candidate <strong>RM</strong> field (same as Candidates tab).</div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Placement officer</label>
+                  <input class="form-control" id="bucklistNewCandPlacementOfficer" list="placementOfficerRosterList" autocomplete="off" />
+                  <div class="form-text">Saved separately to the <strong>PO</strong> field.</div>
+                </div>
+                <div class="col-12">
+                  <label class="form-label small">Roles</label>
+                  <input class="form-control" id="bucklistNewCandRoles" placeholder="Comma-separated" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Industry types</label>
+                  <input class="form-control" id="bucklistNewCandIndustryTypes" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Country type</label>
+                  <input class="form-control" id="bucklistNewCandCountryType" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Enrollment ID</label>
+                  <input class="form-control" id="bucklistNewCandEnrollmentId" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Resume (PDF)</label>
+                  <input class="form-control" type="file" id="bucklistNewCandResume" accept=".pdf" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Cover (PDF)</label>
+                  <input class="form-control" type="file" id="bucklistNewCandCover" accept=".pdf" />
+                </div>
+                <div class="col-12">
+                  <details class="small border rounded p-2 bg-white">
+                    <summary class="fw-semibold" style="cursor:pointer;">Email templates</summary>
+                    <input class="form-control form-control-sm mt-2" id="bucklistNewCandSubject" placeholder="Subject" />
+                    <textarea class="form-control form-control-sm mt-1" id="bucklistNewCandMessage" rows="4" placeholder="Body"></textarea>
+                  </details>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <div class="d-none mb-2" id="bucklistSetupHrFocusNote" role="status"></div>
+          <p class="small text-body-secondary mb-0 mt-1">
+            HR target <strong>country</strong> / <strong>industry</strong> for email runs are set in <strong>6-Month Service</strong>. Row <strong>gear</strong> here saves day count + apps for that client only; column header saves for everyone in the band. Optional <strong>Industry types</strong> / <strong>Country type</strong> in the new-candidate block still save to the candidate profile.
+          </p>
+          <div id="bucklistSetupResult" class="small mt-3 text-danger d-none"></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 flex-wrap gap-2 justify-content-end">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-outline-secondary" id="bucklistSetupClearBtn">Clear form</button>
+          <button type="button" class="btn btn-primary" id="bucklistSetupSaveBtn">
+            <i class="bi bi-floppy2 me-1"></i> Save
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Workflow Detail Modal -->
+  <div class="modal fade" id="wfDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header" style="background: #2563eb; color: white;">
+          <h5 class="modal-title">Workflow Progress: <span id="wfDetailCandName">Candidate</span></h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="p-3 border rounded text-center shadow-sm">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Total Applied</div>
+                <div class="fs-2 fw-bold text-primary" id="wfDetailApplied">0</div>
+                <div class="text-muted small">of <span id="wfDetailTotal">1200</span> apps</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3 border rounded text-center shadow-sm">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Current Day</div>
+                <div class="fs-2 fw-bold text-dark" id="wfDetailDay">Day 0</div>
+                <div class="text-muted small">of 180 service days</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3 border rounded text-center shadow-sm">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Status</div>
+                <div class="fs-2 fw-bold" id="wfDetailStatus">Active</div>
+                <div class="text-muted small" id="wfDetailPhaseLabel">Phase 1</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <h6 class="fw-bold mb-3">Overall Progress</h6>
+            <div class="progress" style="height: 25px; border-radius: 12px; background: #e2e8f0;">
+              <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" id="wfDetailBar" style="width:0%">0%</div>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <h6 class="fw-bold mb-3">Phase Timeline Breakdown</h6>
+            <div id="wfPhaseTimeline" class="tt-workflow-stepper">
+              <!-- Phases Stepper via JS -->
+            </div>
+          </div>
+          
+          <div class="mt-3 p-3 bg-light border rounded">
+             <div class="d-flex justify-content-between align-items-center">
+                <div>
+                   <strong>Next Scheduled Batch</strong>: <span id="wfDetailNextDate">Today</span>
+                   <div class="small text-muted mt-1 mb-0" id="wfDetailNextNote"></div>
+                </div>
+                <div>
+                   <strong>Daily Target</strong>: <span id="wfDetailBatch">10</span> HR contacts
+                </div>
+             </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Workflow Adjustment Modal -->
+  <div class="modal fade" id="wfAdjustModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-warning text-dark">
+          <h5 class="modal-title">Adjust Workflow Plan: <span id="wfAdjustCandName">Candidate</span></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="wfAdjustId">
+          <div class="mb-3">
+            <label class="form-label fw-bold">Current Day in Service</label>
+            <input type="number" class="form-control" id="wfAdjustDays" min="0">
+            <div class="form-text">Adjusting this will recalculate the Service Start Date.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold">Total Applications Sent</label>
+            <div class="input-group">
+              <input type="number" class="form-control" id="wfAdjustApplied" min="0">
+              <button class="btn btn-outline-secondary" id="wfSyncAdjustBtn" type="button" title="Sync with Database">🔄 Sync</button>
+            </div>
+            <div class="form-text">Manual override of total applied count.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold">Target</label>
+            <input type="number" class="form-control" id="wfAdjustTarget" min="0">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-warning" id="wfSaveAdjustBtn">Update Plan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Smart Automation: 100% prediction (workflow phase status) -->
+  <div class="modal fade" id="saWorkflowPhasesModal" tabindex="-1" aria-labelledby="saWorkflowPhasesModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-xl">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white py-2">
+          <h5 class="modal-title fs-6 mb-0" id="saWorkflowPhasesModalLabel">
+            <i class="bi bi-graph-up-arrow me-2"></i><span id="saWorkflowPhasesModalTitle">Workflow prediction</span>
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-muted mb-3" id="saWorkflowPhasesSummary"></p>
+          <h6 class="small fw-bold text-primary mb-2"><i class="bi bi-calendar3 me-1"></i>Forward plan (from days in system)</h6>
+          <p class="text-muted small mb-2" style="font-size:0.8rem;">Enter <strong>days in the system</strong> to align the workflow curve, predictions, and upcoming milestone dates. <strong>Calendar dates</strong> in the table use the server’s stored timeline after automation is enabled (otherwise day numbers and the curve still apply).</p>
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-2 p-2 bg-light rounded border">
+            <label class="small mb-0 fw-semibold text-nowrap" for="saModalDaysInput">Days in system</label>
+            <input type="number" min="0" max="99999" class="form-control form-control-sm" style="max-width: 7rem" id="saModalDaysInput" autocomplete="off" />
+            <span class="text-muted small">Change this to preview the rest of the plan from that day.</span>
+          </div>
+          <p class="small mb-2 text-body" id="saForwardPlanHint"></p>
+          <div class="table-responsive rounded border mb-3">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="small">Calendar date</th>
+                  <th class="small text-center">Day #</th>
+                  <th class="small text-end">Curve target</th>
+                  <th class="small">Prediction / next</th>
+                </tr>
+              </thead>
+              <tbody id="saMilestonePlanBody"></tbody>
+            </table>
+          </div>
+          <h6 class="small fw-bold text-primary mb-2"><i class="bi bi-grid-3x3-gap me-1"></i>By phase (date range &amp; caps)</h6>
+          <div class="table-responsive rounded border">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="small text-nowrap">Date range<br><span class="fw-normal text-muted" style="font-size:0.7rem">(from workflow timeline)</span></th>
+                  <th class="small text-end">No. apps<br><span class="fw-normal text-muted" style="font-size:0.7rem">(phase)</span></th>
+                  <th class="small">Phase</th>
+                  <th class="small">Days</th>
+                  <th class="small text-end">Cumulative</th>
+                  <th class="small text-end">Batch cap</th>
+                  <th class="small text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody id="saWorkflowPhasesBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-sm btn-primary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="folderDetailModal" tabindex="-1" aria-labelledby="folderDetailModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header" style="background: var(--bg-sidebar); color: #fff;">
+          <h5 class="modal-title" id="folderDetailModalLabel"><i class="bi bi-folder2-open me-2"></i><span
+              id="folderDetailName">Folder</span></h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+            <span class="text-muted small"><i class="bi bi-people-fill me-1"></i><span id="folderDetailCount">0</span>
+              Candidates</span>
+            <button class="btn btn-success btn-sm" id="folderDetailDownloadBtn">
+              <i class="bi bi-download me-1"></i> Download CSV
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead>
+                <tr style="background: #f1f5f9;">
+                  <th class="px-3">#</th>
+                  <th class="px-3">First Name</th>
+                  <th class="px-3">Last Name</th>
+                  <th class="px-3">Email</th>
+                  <th class="px-3">Resume Path</th>
+                  <th class="px-3">Enrollment ID</th>
+                </tr>
+              </thead>
+              <tbody id="folderDetailTbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="roleNewFolderModal" tabindex="-1" aria-labelledby="roleNewFolderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="roleNewFolderModalLabel">New folder</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <label for="roleNewFolderInput" class="form-label">Folder name</label>
+          <input type="text" class="form-control" id="roleNewFolderInput" placeholder="e.g. DevOps, Healthcare IT" maxlength="120" autocomplete="off">
+          <div class="form-text">Drag role tags from the blue cards into this folder, or use Cut / Paste from the table.</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" id="roleNewFolderConfirmBtn">Create folder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+
+</html>
