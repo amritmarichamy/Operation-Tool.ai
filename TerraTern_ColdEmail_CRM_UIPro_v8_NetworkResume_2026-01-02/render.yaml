@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: terratern-crm
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn server:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.10.12
+    disk:
+      name: crm-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
