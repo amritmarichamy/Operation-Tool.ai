@@ -2097,7 +2097,6 @@ def api_login():
             return jsonify({"error": "Invalid credentials"}), 401
                 
         if not user.is_verified:
-            # Re-send OTP if not verified
             otp = str(random.randint(100000, 999999))
             user.otp_code = otp
             user.otp_expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
@@ -2114,59 +2113,40 @@ def api_login():
                     server.starttls()
                     server.login(OTP_EMAIL, OTP_PASS)
                     server.send_message(msg)
-                return jsonify({"status": "unverified", "message": "Verification code sent to your email."}), 200
+                return jsonify({
+                    "status": "unverified", 
+                    "user_id": user.id,
+                    "message": "Verification code sent to your email.",
+                    "requires_verification": True
+                }), 200
             except Exception as email_err:
                 print(f"[Login] SMTP Error: {email_err}")
-                return jsonify({"status": "unverified", "message": "Account exists but failed to send verification email."}), 200
+                return jsonify({
+                    "status": "unverified", 
+                    "user_id": user.id,
+                    "message": "Account exists but failed to send verification email.",
+                    "requires_verification": True
+                }), 200
 
         if not user.is_approved:
             return jsonify({"error": "Your account is pending approval by an administrator."}), 403
 
+        # Success - Set session
         session["user_id"] = user.id
         session["username"] = user.username
         session["role"] = user.role
-        return jsonify({"message": "Login successful", "role": user.role}), 200
-    except Exception as e:
-        print(f"[Login] Critical Error: {e}")
-        return jsonify({"error": f"Internal Server Error: {str(e)}"}), 500
-                server.send_message(msg)
-        except Exception as e:
-            print(f"[Auth] SMTP Error re-sending verification OTP: {e}")
-            return jsonify({"error": "Failed to re-send verification OTP. Check server logs."}), 500
-
-        return jsonify({
-            "error": "Email not verified. A new OTP has been sent.",
-            "requires_verification": True,
-            "user_id": user.id
-        }), 403
-
-    if not user.is_approved:
-        return jsonify({"error": "Account pending admin approval. Please wait for an administrator to approve your access."}), 403
-
-    # Generate OTP for login
-    otp = str(random.randint(100000, 999999))
-    user.otp_code = otp
-    user.otp_expiry = datetime.utcnow() + timedelta(minutes=10)
-    db.session.commit()
-
-    # Send OTP Email
-    try:
-        msg = EmailMessage()
-        msg["Subject"] = f"Your Login OTP - JSA Pipeline"
-        msg["From"] = f"JSA Pipeline <{OTP_EMAIL}>"
-        msg["To"] = user.email
-        msg.set_content(f"Your OTP for login is: {otp}\nExpires in 10 minutes.")
         
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            server.login(OTP_EMAIL, OTP_PASS)
-            server.send_message(msg)
-            
-        return jsonify({"message": "OTP sent to your email", "user_id": user.id}), 200
+        return jsonify({
+            "status": "success",
+            "message": "Login successful", 
+            "role": user.role, 
+            "user_id": user.id,
+            "redirect": url_for("index")
+        }), 200
     except Exception as e:
-        print(f"[Auth] SMTP Error: {e}")
-        return jsonify({"error": "Failed to send OTP. Check server logs."}), 500
-
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Internal Server Error: {str(e)}"}), 500
 @app.post("/api/auth/verify-otp")
 def api_verify_otp():
     data = request.json or {}
@@ -2177,7 +2157,7 @@ def api_verify_otp():
     if not user or user.otp_code != otp:
         return jsonify({"error": "Invalid OTP"}), 401
 
-    if user.otp_expiry < datetime.utcnow():
+    if user.otp_expiry < datetime.now(timezone.utc):
         return jsonify({"error": "OTP expired"}), 401
 
     # Success
@@ -2195,7 +2175,7 @@ def api_verify_otp():
     session['user_id'] = user.id
     session['username'] = user.username
     session['role'] = user.role
-    return jsonify({"message": "Login successful", "redirect": url_for("dashboard")}), 200
+    return jsonify({"message": "Login successful", "redirect": url_for("index")}), 200
 
 @app.route("/api/auth/logout")
 def api_logout():
