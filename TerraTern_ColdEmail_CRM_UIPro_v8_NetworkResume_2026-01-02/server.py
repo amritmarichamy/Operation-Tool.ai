@@ -61,7 +61,7 @@ app = Flask(__name__,
             static_folder=os.path.join(FRONTEND_DIR, "static"),
             template_folder=os.path.join(FRONTEND_DIR, "templates"))
 app.config["TEMPLATES_AUTO_RELOAD"] = True
-app.secret_key = "terra-tern-crm-secret-key-2026"
+app.secret_key = "app.secret_key = os.getenv("SECRET_KEY")"
 CORS(app)
 
 # Email settings (Gmail)
