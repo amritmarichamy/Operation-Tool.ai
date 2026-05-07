@@ -7765,4 +7765,5 @@ if __name__ == "__main__":
     print("[Server] SQLite DB backup: GET /api/candidates/backup_sqlite (also sqlite_backup, /api/backup/database)")
     print("[Server] CRM manifest CSV: POST/GET /api/reports/crm-manifest | /api/runs?download=crm_manifest_csv | /api/crm-manifest-export\n")
 
-    app.run(host="0.0.0.0", port=8080, debug=debug, threaded=True)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port, debug=debug, threaded=True)
