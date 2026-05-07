@@ -2085,57 +2085,61 @@ def api_register():
         "requires_verification": True
     }), 201
 
+@app.route("/api/debug/db")
+def api_debug_db():
+    try:
+        user_count = User.query.count()
+        return jsonify({
+            "status": "ok",
+            "user_count": user_count,
+            "db_path": CRM_SQLITE_PATH,
+            "exists": os.path.exists(CRM_SQLITE_PATH)
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.post("/api/auth/login")
 def api_login():
+    print("[Login] Request received")
     try:
-        data = request.json or {}
+        data = request.json
+        if not data:
+            print("[Login] No JSON data provided")
+            return jsonify({"error": "No data provided"}), 400
+            
         username = data.get("username", "").strip()
         password = data.get("password", "")
+        print(f"[Login] Attempting login for: {username}")
 
         user = User.query.filter_by(username=username).first()
-        if not user or not user.check_password(password):
+        if not user:
+            print(f"[Login] User not found: {username}")
+            return jsonify({"error": "Invalid credentials"}), 401
+            
+        if not user.check_password(password):
+            print(f"[Login] Password mismatch for: {username}")
             return jsonify({"error": "Invalid credentials"}), 401
                 
+        # If we reach here, credentials are correct
+        print(f"[Login] Success for {username}. Verified: {user.is_verified}, Approved: {user.is_approved}")
+
         if not user.is_verified:
-            otp = str(random.randint(100000, 999999))
-            user.otp_code = otp
-            user.otp_expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
-            db.session.commit()
-            
-            try:
-                msg = EmailMessage()
-                msg["Subject"] = "Verify Your Terra Tern Account"
-                msg["From"] = f"JSA Pipeline <{OTP_EMAIL}>"
-                msg["To"] = user.email
-                msg.set_content(f"Your verification code is: {otp}\nExpires in 10 minutes.")
-                
-                with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-                    server.starttls()
-                    server.login(OTP_EMAIL, OTP_PASS)
-                    server.send_message(msg)
-                return jsonify({
-                    "status": "unverified", 
-                    "user_id": user.id,
-                    "message": "Verification code sent to your email.",
-                    "requires_verification": True
-                }), 200
-            except Exception as email_err:
-                print(f"[Login] SMTP Error: {email_err}")
-                return jsonify({
-                    "status": "unverified", 
-                    "user_id": user.id,
-                    "message": "Account exists but failed to send verification email.",
-                    "requires_verification": True
-                }), 200
+            return jsonify({
+                "status": "unverified", 
+                "user_id": user.id,
+                "message": "Email not verified. Please check your inbox for OTP.",
+                "requires_verification": True
+            }), 200
 
         if not user.is_approved:
-            return jsonify({"error": "Your account is pending approval by an administrator."}), 403
+            return jsonify({"error": "Account pending admin approval."}), 403
 
         # Success - Set session
         session["user_id"] = user.id
         session["username"] = user.username
         session["role"] = user.role
         
+        print(f"[Login] Session set for {username}")
         return jsonify({
             "status": "success",
             "message": "Login successful", 
@@ -2145,7 +2149,8 @@ def api_login():
         }), 200
     except Exception as e:
         import traceback
-        traceback.print_exc()
+        error_msg = traceback.format_exc()
+        print(f"[Login] CRITICAL EXCEPTION:\n{error_msg}")
         return jsonify({"error": f"Internal Server Error: {str(e)}"}), 500
 @app.post("/api/auth/verify-otp")
 def api_verify_otp():
