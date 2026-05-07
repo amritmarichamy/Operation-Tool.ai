@@ -2085,18 +2085,6 @@ def api_register():
         "requires_verification": True
     }), 201
 
-# ---- EMERGENCY SETUP ROUTE (Remove after use) ----
-@app.route("/setup-admin")
-def setup_admin():
-    from werkzeug.security import generate_password_hash
-    admin = User.query.filter_by(username="admin").first()
-    if not admin:
-        admin = User(username="admin", password=generate_password_hash("admin123"))
-        db.session.add(admin)
-        db.session.commit()
-        return "Admin user (admin / admin123) created successfully! You can now log in."
-    return "Admin user already exists."
-
 @app.post("/api/auth/login")
 def api_login():
     data = request.json or {}
